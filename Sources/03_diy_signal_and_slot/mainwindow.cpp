@@ -27,6 +27,7 @@ MainWindow::MainWindow(QWidget *parent)
 //       qDebug() << "Lamdba" << n1 << n2;
 //    });
 //    emit s->exit1(10, 20);
+
     connect(s, &Sender::exit1, r, &Receiver::handleExit1);
     connect(s, &Sender::exit2, r, &Receiver::handleExit2);
 
