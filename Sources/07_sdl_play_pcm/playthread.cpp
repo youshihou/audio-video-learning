@@ -7,7 +7,8 @@
 
 #define FILE_NAME "/Users/ankui/Desktop/out.pcm"
 #define SAMPLE_RATE 44100
-#define SAMPLE_SIZE 32
+#define SAMPLE_FORMAT AUDIO_F32LSB
+#define SAMPLE_SIZE SDL_AUDIO_BITSIZE(SAMPLE_FORMAT)
 #define CHANNELS 2
 #define SAMPLES 1024
 #define BYTES_PER_SAMPLE ((SAMPLE_SIZE * CHANNELS) / 8)
@@ -53,7 +54,7 @@ void PlayThread::run() {
 
     SDL_AudioSpec spec;
     spec.freq = SAMPLE_RATE;
-    spec.format = AUDIO_F32LSB;
+    spec.format = SAMPLE_FORMAT;
     spec.channels = CHANNELS;
     spec.samples = SAMPLES;
     spec.callback = pull_audio_data;
