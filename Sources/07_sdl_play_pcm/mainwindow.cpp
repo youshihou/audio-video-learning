@@ -29,6 +29,10 @@ void MainWindow::on_playButton_clicked() {
     } else {
         _playThread = new PlayThread(this);
         _playThread->start();
+        connect(_playThread, &PlayThread::finished, [this]() {
+            _playThread = nullptr;
+            ui->playButton->setText("start play");
+        });
         ui->playButton->setText("stop play");
     }
 }
