@@ -37,7 +37,7 @@ void showSpec(AVFormatContext *ctx) {
     qDebug() << params->channels;
     qDebug() << params->sample_rate;
     qDebug() << params->format;
-    qDebug() << av_get_bytes_per_sample((AVSampleFormat) params->format);
+    qDebug() << (av_get_bytes_per_sample((AVSampleFormat) params->format) << 3);
 }
 
 void AudioThread::run() {

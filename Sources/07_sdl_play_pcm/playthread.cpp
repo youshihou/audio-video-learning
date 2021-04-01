@@ -11,11 +11,11 @@
 #define SAMPLE_SIZE SDL_AUDIO_BITSIZE(SAMPLE_FORMAT)
 #define CHANNELS 2
 #define SAMPLES 1024
-#define BYTES_PER_SAMPLE ((SAMPLE_SIZE * CHANNELS) / 8)
+#define BYTES_PER_SAMPLE ((SAMPLE_SIZE * CHANNELS) >> 3)
 #define BUFFER_SIZE (SAMPLES * BYTES_PER_SAMPLE)
 
 
-typedef struct {
+typedef struct AudioBuffer {
     int len = 0;
     int pullLen = 0;
     Uint8 *data = nullptr;
