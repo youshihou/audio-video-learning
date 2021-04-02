@@ -8,6 +8,7 @@ extern "C" {
 #include <libavdevice/avdevice.h>
 #include <libavformat/avformat.h>
 #include <libavutil/avutil.h>
+#include <libavcodec/avcodec.h>
 }
 
 #ifdef Q_OS_MAC
@@ -36,8 +37,13 @@ void showSpec(AVFormatContext *ctx) {
     AVCodecParameters *params = stream->codecpar;
     qDebug() << params->channels;
     qDebug() << params->sample_rate;
+#ifdef Q_OS_MAC
+    qDebug() << params->codec_id;
+    qDebug() << av_get_bits_per_sample(params->codec_id);
+#else
     qDebug() << params->format;
-    qDebug() << (av_get_bytes_per_sample((AVSampleFormat) params->format) << 3);
+    qDebug() << av_get_bytes_per_sample((AVSampleFormat) params->format);
+#endif
 }
 
 void AudioThread::run() {
