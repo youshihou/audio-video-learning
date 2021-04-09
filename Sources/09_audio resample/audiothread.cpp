@@ -99,6 +99,8 @@ void AudioThread::run() {
         goto end;
     }
 
+    // *(p + i) = p[i]
+    // intData[0] = *inData, outData[0] = *outData
     while ((len = inFile.read((char *)inData[0], inLineSize)) > 0) {
         inSamples = len / inBytesPerSample;
         ret = swr_convert(ctx, outData, outSamples, (const uint8_t **)inData, inSamples);
@@ -114,7 +116,13 @@ void AudioThread::run() {
     inFile.close();
     outFile.close();
 
+    if (inData) {
+        av_freep(&inData[0]);
+    }
     av_freep(&inData);
+    if (outData) {
+        av_freep(&outData[0]);
+    }
     av_freep(&outData);
 
     swr_free(&ctx);
