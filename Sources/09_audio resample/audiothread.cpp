@@ -44,14 +44,14 @@ void AudioThread::run() {
     uint8_t **inData = nullptr;
     int inLineSize = 0;
     int inChannels = av_get_channel_layout_nb_channels(inChLayout);
-    int inSamples = 1024;
     int inBytesPerSample = inChannels * av_get_bytes_per_sample(inSampleFmt);
+    int inSamples = 1024;
 
     uint8_t **outData = nullptr;
     int outLineSize = 0;
     int outChannels = av_get_channel_layout_nb_channels(outChLayout);
-    int outSamples = 1024;
     int outBytesPerSample = outChannels * av_get_bytes_per_sample(outSampleFmt);
+    int outSamples = av_rescale_rnd(outSampleRate, inSamples, inSampleRate, AV_ROUND_UP);
 
     int ret = 0;
     int len = 0;
@@ -109,6 +109,11 @@ void AudioThread::run() {
             qDebug() << "swr_convert error" << errbuf;
             goto end;
         }
+        outFile.write((char *)outData[0], ret * outBytesPerSample);
+    }
+
+    while ((ret = swr_convert(ctx, outData, outSamples, nullptr, 0)) > 0) {
+        qDebug() << ret;
         outFile.write((char *)outData[0], ret * outBytesPerSample);
     }
 
