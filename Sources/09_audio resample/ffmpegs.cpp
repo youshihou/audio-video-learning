@@ -1,4 +1,4 @@
-#include "audiothread.h"
+#include "ffmpegs.h"
 
 #include <QDebug>
 #include <QFile>
@@ -14,32 +14,26 @@ extern "C" {
     av_strerror(ret, errbuf, sizeof(errbuf));
 
 
-AudioThread::AudioThread(QObject *parent) : QThread(parent) {
-    connect(this, &AudioThread::finished, this, &AudioThread::deleteLater);
+FFmpegs::FFmpegs() {
+
 }
 
-AudioThread::~AudioThread() {
-    disconnect();
-    requestInterruption();
-    quit();
-    wait();
-    qDebug() << this << "deStruct";
+
+void FFmpegs::resampleAudio(ResampleAudioSpec &in, ResampleAudioSpec &out) {
+    resampleAudio(in.filename, in.sampleRate, in.sampleFmt, in.channelLayout,
+                  out.filename, out.sampleRate, out.sampleFmt, out.channelLayout);
 }
 
-void AudioThread::run() {
-    const char * inFilename = "/Users/ankui/Desktop/44100_f32le_2.pcm";
-    const char * outFilename = "/Users/ankui/Desktop/48000_s16le_1.pcm";
+void FFmpegs::resampleAudio(const char *inFilename,
+                            int inSampleRate,
+                            AVSampleFormat inSampleFmt,
+                            int inChLayout,
+                            const char *outFilename,
+                            int outSampleRate,
+                            AVSampleFormat outSampleFmt,
+                            int outChLayout) {
     QFile inFile(inFilename);
     QFile outFile(outFilename);
-
-    AVSampleFormat inSampleFmt = AV_SAMPLE_FMT_FLT;
-    int inSampleRate = 44100;
-    int inChLayout = AV_CH_LAYOUT_STEREO;
-
-    AVSampleFormat outSampleFmt = AV_SAMPLE_FMT_S16;
-    int outSampleRate = 48000;
-    int outChLayout = AV_CH_LAYOUT_MONO;
-
 
     uint8_t **inData = nullptr;
     int inLineSize = 0;
@@ -136,4 +130,3 @@ void AudioThread::run() {
 
     swr_free(&ctx);
 }
-
