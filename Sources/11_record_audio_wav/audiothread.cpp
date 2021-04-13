@@ -83,7 +83,7 @@ void AudioThread::run() {
     }
     header.blockAlign = header.bitsPerSample * header.numChannels >> 3;
     header.byteRate = header.sampleRate * header.blockAlign;
-//    header.dataChunkDataSize = 0;
+    header.dataChunkDataSize = 0;
     file.write((const char *) &header, sizeof (WAVHeader));
 
     AVPacket pkt;
@@ -91,7 +91,9 @@ void AudioThread::run() {
         ret = av_read_frame(ctx, &pkt);
         if (ret == 0) {
             file.write((const char *) pkt.data, pkt.size);
-//            header.dataChunkDataSize += pkt.size;
+            header.dataChunkDataSize += pkt.size;
+            unsigned long long ms = 1000.0 * header.dataChunkDataSize / header.byteRate;
+            emit timeChange(ms);
         } else if (ret == AVERROR(EAGAIN)) {
             continue;
         } else {
@@ -103,7 +105,7 @@ void AudioThread::run() {
     }
 
     int size = file.size();
-    header.dataChunkDataSize = size - sizeof (WAVHeader);
+//    header.dataChunkDataSize = size - sizeof (WAVHeader);
     file.seek(sizeof (WAVHeader) - sizeof (header.dataChunkDataSize));
     file.write((const char *)&header.dataChunkDataSize, sizeof (header.dataChunkDataSize));
 

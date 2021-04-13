@@ -18,6 +18,7 @@ public:
 
 private slots:
     void on_audioButton_clicked();
+    void onTimeChange(unsigned long long ms);
 
 private:
     Ui::MainWindow *ui;
