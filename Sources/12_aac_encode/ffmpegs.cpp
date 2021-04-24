@@ -125,6 +125,11 @@ void FFmpegs::accEncode(AudioEncodeSpec &in, const char *outFilename) {
     }
 
     while ((ret = inFile.read((char*)frame->data[0], frame->linesize[0])) > 0) {
+        if (ret < frame->linesize[0]) {
+            int bytes = av_get_bytes_per_sample((AVSampleFormat)frame->format);
+            int ch = av_get_channel_layout_nb_channels(frame->channel_layout);
+            frame->nb_samples = ret / (bytes * ch);
+        }
         if (encode(ctx, frame, pkt, outFile) < 0) {
             goto end;
         }
