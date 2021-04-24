@@ -90,6 +90,8 @@ void AudioThread::run() {
             qDebug() << "av_read_frame error" << errbuf;
             break;
         }
+        // MUST!!!
+        av_packet_unref(&pkt);
     }
 
     file.close();
