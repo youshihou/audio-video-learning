@@ -32,7 +32,7 @@ MainWindow::~MainWindow()
 
 
 
-void sdl_show_bmp() {
+void sdl_show_yuv() {
     SDL_Window *window = nullptr;
     SDL_Renderer *renderer = nullptr;
     SDL_Texture *texture = nullptr;
@@ -91,8 +91,5 @@ void sdl_show_bmp() {
 }
 
 void MainWindow::on_playButton_clicked() {
-//    PlayThread *thread = new PlayThread(this);
-//    thread->start();
-
-    sdl_show_bmp();
+    sdl_show_yuv();
 }
