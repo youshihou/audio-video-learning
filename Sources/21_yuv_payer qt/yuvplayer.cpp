@@ -73,7 +73,7 @@ void YuvPlayer::freeCurrentImage() {
 }
 
 
-void YuvPlayer::timerEvent(QTimerEvent *event) {
+void YuvPlayer::timerEvent(Q_DECL_UNUSED QTimerEvent *event) {
     int imageSize = av_image_get_buffer_size(_yuv.pixelFormat, _yuv.width, _yuv.height, 1);
     char data[imageSize];
     if (_file.read(data, imageSize) > 0) {
@@ -97,7 +97,7 @@ void YuvPlayer::timerEvent(QTimerEvent *event) {
     }
 }
 
-void YuvPlayer::paintEvent(QPaintEvent *event) {
+void YuvPlayer::paintEvent(Q_DECL_UNUSED QPaintEvent *event) {
     if (!_currentImage) { return; }
 
 //    QPainter painter(this);
