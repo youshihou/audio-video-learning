@@ -102,5 +102,6 @@ void YuvPlayer::paintEvent(Q_DECL_UNUSED QPaintEvent *event) {
 
 //    QPainter painter(this);
 //    painter.drawImage(QPoint(0, 0), *_currentImage);
+
     QPainter(this).drawImage(QRect(0, 0, width(), height()), *_currentImage);
 }
