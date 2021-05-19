@@ -8,8 +8,8 @@ MainWindow::MainWindow(QWidget *parent)
     ui->setupUi(this);
 
     _player = new YuvPlayer(this);
-    int w = 400;
-    int h = 400;
+    int w = 300;
+    int h = 500;
     int x = (width() - w) >> 1;
     int y = (height() - h) >> 1;
     _player->setGeometry(x, y, w, h);

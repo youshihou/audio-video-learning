@@ -49,6 +49,7 @@ private:
     int _timerId = 0;
     State _state = Stopped;
     QImage *_currentImage = nullptr;
+    QRect _dstRect;
 
     void freeCurrentImage();
 
