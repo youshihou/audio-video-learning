@@ -148,7 +148,10 @@ end:
     inFile.close();
     outFile.close();
 
-    av_frame_free(&frame);
+    if (frame) {
+        av_freep(&frame->data[0]);
+        av_frame_free(&frame);
+    }
     av_packet_free(&pkt);
     avcodec_free_context(&ctx);
 
