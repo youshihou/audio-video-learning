@@ -47,6 +47,7 @@ signals:
 private:
     Yuv _yuv;
     int _timerId = 0;
+    int _interval = 0;
     int _imageSize = 0;
     State _state = Stopped;
     QImage *_currentImage = nullptr;

@@ -29,7 +29,7 @@ YuvPlayer::~YuvPlayer() {
 
 void YuvPlayer::play() {
     if (_state == YuvPlayer::Playing) { return; }
-    _timerId = startTimer(1000 / _yuv.fps);
+    _timerId = startTimer(_interval);
     setState(YuvPlayer::Playing);
 }
 
@@ -64,6 +64,7 @@ void YuvPlayer::setYuv(Yuv &yuv) {
         qDebug() << "file open error" << yuv.filename;
     }
 
+    _interval = 1000 / _yuv.fps;
     _imageSize = av_image_get_buffer_size(_yuv.pixelFormat, _yuv.width, _yuv.height, 1);
 
 
