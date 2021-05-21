@@ -22,27 +22,28 @@ YuvPlayer::YuvPlayer(QWidget *parent) : QWidget(parent) {
 }
 
 YuvPlayer::~YuvPlayer() {
-    _file.close();
+    closeFile();
     freeCurrentImage();
+    stopTimer();
 }
 
 void YuvPlayer::play() {
+    if (_state == YuvPlayer::Playing) { return; }
     _timerId = startTimer(1000 / _yuv.fps);
     setState(YuvPlayer::Playing);
 }
 
 void YuvPlayer::pause() {
-    if (_timerId) {
-        killTimer(_timerId);
-    }
+    if (_state != YuvPlayer::Playing) { return; }
+
+    stopTimer();
     setState(YuvPlayer::Paused);
 }
 
 void YuvPlayer::stop() {
-    if (_timerId) {
-        killTimer(_timerId);
-    }
+    if (_state == YuvPlayer::Stopped) { return; }
 
+    stopTimer();
     freeCurrentImage();
     update();
     setState(YuvPlayer::Stopped);
@@ -55,11 +56,15 @@ bool YuvPlayer::isPlaying() {
 void YuvPlayer::setYuv(Yuv &yuv) {
     _yuv = yuv;
 
+    closeFile();
 
-    _file.setFileName(yuv.filename);
-    if (!_file.open(QFile::ReadOnly)) {
+//    _file.setFileName(yuv.filename);
+    _file = new QFile(yuv.filename);
+    if (!_file->open(QFile::ReadOnly)) {
         qDebug() << "file open error" << yuv.filename;
     }
+
+    _imageSize = av_image_get_buffer_size(_yuv.pixelFormat, _yuv.width, _yuv.height, 1);
 
 
     int w = width();
@@ -100,10 +105,23 @@ void YuvPlayer::setState(State state) {
     if (state == _state) { return; }
 
     if (state == YuvPlayer::Stopped || state == YuvPlayer::Finished) {
-        _file.seek(0);
+        _file->seek(0);
     }
     _state = state;
     emit stateChanged();
+}
+
+void YuvPlayer::stopTimer() {
+    if (_timerId == 0) { return; }
+    killTimer(_timerId);
+    _timerId = 0;
+}
+
+void YuvPlayer::closeFile() {
+    if (!_file) { return; }
+    _file->close();
+    delete  _file;
+    _file = nullptr;
 }
 
 void YuvPlayer::freeCurrentImage() {
@@ -115,9 +133,8 @@ void YuvPlayer::freeCurrentImage() {
 
 
 void YuvPlayer::timerEvent(Q_DECL_UNUSED QTimerEvent *event) {
-    int imageSize = av_image_get_buffer_size(_yuv.pixelFormat, _yuv.width, _yuv.height, 1);
-    char data[imageSize];
-    if (_file.read(data, imageSize) > 0) {
+    char data[_imageSize];
+    if (_file->read(data, _imageSize) == _imageSize) {
         RawVideoFrame in = {
             data,
             _yuv.width, _yuv.height,
@@ -125,7 +142,9 @@ void YuvPlayer::timerEvent(Q_DECL_UNUSED QTimerEvent *event) {
         };
         RawVideoFrame out = {
             nullptr,
-            _yuv.width, _yuv.height,
+            _yuv.width >> 4 << 4,
+            _yuv.height >> 4 << 4,
+//            _yuv.width, _yuv.height,
             AV_PIX_FMT_RGB24
         };
         FFmpegs::convertRawVideo(in, out);
@@ -134,7 +153,7 @@ void YuvPlayer::timerEvent(Q_DECL_UNUSED QTimerEvent *event) {
         _currentImage = new QImage((uchar *)out.pixels, out.width, out.height, QImage::Format_RGB888);
         update();
     } else {
-        killTimer(_timerId);
+        stopTimer();
         setState(YuvPlayer::Finished);
     }
 }

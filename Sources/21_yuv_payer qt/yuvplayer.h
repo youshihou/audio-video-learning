@@ -46,14 +46,17 @@ signals:
 
 private:
     Yuv _yuv;
-    QFile _file;
     int _timerId = 0;
+    int _imageSize = 0;
     State _state = Stopped;
     QImage *_currentImage = nullptr;
+    QFile *_file = nullptr;
     QRect _dstRect;
 
     void setState(State state);
 
+    void stopTimer();
+    void closeFile();
     void freeCurrentImage();
 
     void timerEvent(QTimerEvent* event);

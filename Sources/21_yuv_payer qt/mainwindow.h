@@ -20,6 +20,7 @@ public:
 private slots:
     void on_playButton_clicked();
     void on_stopButton_clicked();
+    void on_nextButton_clicked();
 
     void onPlayerStateChanged();
 
