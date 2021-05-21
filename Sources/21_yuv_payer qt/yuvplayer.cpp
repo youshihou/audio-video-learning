@@ -28,21 +28,24 @@ YuvPlayer::~YuvPlayer() {
 
 void YuvPlayer::play() {
     _timerId = startTimer(1000 / _yuv.fps);
-    _state = YuvPlayer::Playing;
+    setState(YuvPlayer::Playing);
 }
 
 void YuvPlayer::pause() {
     if (_timerId) {
         killTimer(_timerId);
     }
-    _state = YuvPlayer::Paused;
+    setState(YuvPlayer::Paused);
 }
 
 void YuvPlayer::stop() {
     if (_timerId) {
         killTimer(_timerId);
     }
-    _state = YuvPlayer::Stopped;
+
+    freeCurrentImage();
+    update();
+    setState(YuvPlayer::Stopped);
 }
 
 bool YuvPlayer::isPlaying() {
@@ -93,6 +96,16 @@ YuvPlayer::State YuvPlayer::getState() {
 
 
 
+void YuvPlayer::setState(State state) {
+    if (state == _state) { return; }
+
+    if (state == YuvPlayer::Stopped || state == YuvPlayer::Finished) {
+        _file.seek(0);
+    }
+    _state = state;
+    emit stateChanged();
+}
+
 void YuvPlayer::freeCurrentImage() {
     if (!_currentImage) { return; }
     free(_currentImage->bits());
@@ -122,16 +135,11 @@ void YuvPlayer::timerEvent(Q_DECL_UNUSED QTimerEvent *event) {
         update();
     } else {
         killTimer(_timerId);
+        setState(YuvPlayer::Finished);
     }
 }
 
 void YuvPlayer::paintEvent(Q_DECL_UNUSED QPaintEvent *event) {
     if (!_currentImage) { return; }
-
-//    QPainter painter(this);
-//    painter.drawImage(QPoint(0, 0), *_currentImage);
-
-//    QPainter(this).drawImage(QRect(0, 0, width(), height()), *_currentImage);
-
     QPainter(this).drawImage(_dstRect, *_currentImage);
 }

@@ -20,6 +20,8 @@ MainWindow::MainWindow(QWidget *parent)
         30
     };
     _player->setYuv(yuv);
+
+    connect(_player, &YuvPlayer::stateChanged, this, &MainWindow::onPlayerStateChanged);
 }
 
 MainWindow::~MainWindow()
@@ -30,13 +32,22 @@ MainWindow::~MainWindow()
 void MainWindow::on_playButton_clicked() {    
     if (_player->isPlaying()) {
         _player->pause();
-        ui->playButton->setText("play");
+//        ui->playButton->setText("play");
     } else {
         _player->play();
-        ui->playButton->setText("pause");
+//        ui->playButton->setText("pause");
     }
 }
 
 void MainWindow::on_stopButton_clicked() {
     _player->stop();
+}
+
+
+void MainWindow::onPlayerStateChanged() {
+    if (_player->getState() == YuvPlayer::Playing) {
+        ui->playButton->setText("pause");
+    } else {
+        ui->playButton->setText("play");
+    }
 }

@@ -42,6 +42,7 @@ public:
     State getState();
 
 signals:
+    void stateChanged();
 
 private:
     Yuv _yuv;
@@ -50,6 +51,8 @@ private:
     State _state = Stopped;
     QImage *_currentImage = nullptr;
     QRect _dstRect;
+
+    void setState(State state);
 
     void freeCurrentImage();
 
