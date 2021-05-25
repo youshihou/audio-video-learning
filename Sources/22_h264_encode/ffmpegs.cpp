@@ -64,6 +64,7 @@ void FFmpegs::h264Encode(VideoEncodeSpec &in, const char *outFilename) {
     AVCodecContext *ctx = nullptr;
     AVFrame *frame = nullptr;
     AVPacket *pkt = nullptr;
+//    uint8_t *buffer = nullptr;
 
     codec = avcodec_find_encoder_by_name("libx264");
     if (!codec) {
@@ -103,11 +104,11 @@ void FFmpegs::h264Encode(VideoEncodeSpec &in, const char *outFilename) {
     frame->format = ctx->pix_fmt;
     frame->pts = 0;
 
+
 //    ret = av_frame_get_buffer(frame, 0);
 //    if (ret < 0) {
 //        ERROR_BUFFER(ret);
 //        qDebug() << "av_frame_get_buffer error" << errbuf;
-//        return;
 //        goto end;
 //    }
 
@@ -115,9 +116,16 @@ void FFmpegs::h264Encode(VideoEncodeSpec &in, const char *outFilename) {
     if (ret < 0) {
         ERROR_BUFFER(ret);
         qDebug() << "av_image_alloc error" << errbuf;
-        return;
         goto end;
     }
+
+//    buffer = (uint8_t *)av_malloc(imageSize);
+//    ret = av_image_fill_arrays(frame->data, frame->linesize, buffer, in.pixFmt, in.width, in.height, 1);
+//    if (ret < 0) {
+//        ERROR_BUFFER(ret);
+//        qDebug() << "av_image_fill_arrays error" << errbuf;
+//        goto end;
+//    }
 
 
     pkt = av_packet_alloc();
@@ -147,6 +155,8 @@ void FFmpegs::h264Encode(VideoEncodeSpec &in, const char *outFilename) {
 end:
     inFile.close();
     outFile.close();
+
+//    av_freep(&buffer);
 
     if (frame) {
         av_freep(&frame->data[0]);
