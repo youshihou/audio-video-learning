@@ -77,13 +77,13 @@ static int decode(AVCodecContext* ctx, AVPacket* pkt, AVFrame* frame, QFile &out
 //        outFile.write((char*)frame->data[1], ctx->width * ctx->height >> 2);
 //        outFile.write((char*)frame->data[2], ctx->width * ctx->height >> 2);
 
-//        outFile.write((char*)frame->data[0], (frame->linesize[0] - 48) * ctx->height);
-//        outFile.write((char*)frame->data[1], (frame->linesize[1] - 24) * ctx->height >> 1);
-//        outFile.write((char*)frame->data[2], (frame->linesize[2] - 24) * ctx->height >> 1);
+        outFile.write((char*)frame->data[0], (frame->linesize[0] - 48) * ctx->height);
+        outFile.write((char*)frame->data[1], (frame->linesize[1] - 24) * ctx->height >> 1);
+        outFile.write((char*)frame->data[2], (frame->linesize[2] - 24) * ctx->height >> 1);
 
-        int imageSize = av_image_get_buffer_size(ctx->pix_fmt, ctx->width, ctx->height, 1);
-        qDebug() << imageSize;
-        outFile.write((char*)frame->data[0], imageSize);
+//        int imageSize = av_image_get_buffer_size(ctx->pix_fmt, ctx->width, ctx->height, 1);
+//        qDebug() << imageSize;
+//        outFile.write((char*)frame->data[0], imageSize);
 
 //        outFile.write((char*)frame->data[0], frame->linesize[0] * ctx->height);
 //        outFile.write((char*)frame->data[1], frame->linesize[1] * ctx->height >> 1);
