@@ -48,7 +48,7 @@ static int decode(AVCodecContext* ctx, AVPacket* pkt, AVFrame* frame, QFile &out
 void FFmpegs::accDecode(const char *inFilename, AudioDecodeSpec &out) {
     int ret = 0;
     char inDataArray[IN_DATA_SIZE + AV_INPUT_BUFFER_PADDING_SIZE];
-    char *inData = inDataArray;
+    char *inData = nullptr;
     int inLen = 0;
     int inEnd = 0;
 
@@ -106,32 +106,53 @@ void FFmpegs::accDecode(const char *inFilename, AudioDecodeSpec &out) {
         goto end;
     }
 
-    inLen = inFile.read(inData, IN_DATA_SIZE);
-    while (inLen > 0) {
-        ret = av_parser_parse2(parserCtx, ctx, &pkt->data, &pkt->size, (uint8_t*)inData, inLen, AV_NOPTS_VALUE, AV_NOPTS_VALUE, 0);
-        if (ret < 0) {
-            ERROR_BUFFER(ret);
-            qDebug() << "av_parser_parse2 error" << errbuf;
-            goto end;
-        }
+//    inLen = inFile.read(inData, IN_DATA_SIZE);
+//    while (inLen > 0) {
+//        ret = av_parser_parse2(parserCtx, ctx, &pkt->data, &pkt->size, (uint8_t*)inData, inLen, AV_NOPTS_VALUE, AV_NOPTS_VALUE, 0);
+//        if (ret < 0) {
+//            ERROR_BUFFER(ret);
+//            qDebug() << "av_parser_parse2 error" << errbuf;
+//            goto end;
+//        }
 
-        inData += ret;
-        inLen -= ret;
+//        inData += ret;
+//        inLen -= ret;
 
-        if (pkt->size <= 0) { continue; }
+//        if (pkt->size <= 0) { continue; }
 
-        if (decode(ctx, pkt, frame, outFile) < 0) {
-            goto end;
-        }
+//        if (decode(ctx, pkt, frame, outFile) < 0) {
+//            goto end;
+//        }
 
-        if (inLen < REFILL_THRESH && !inEnd) {
-            memmove(inDataArray, inData, inLen);
-            inData = inDataArray;
-            int len = inFile.read(inData + inLen, IN_DATA_SIZE - inLen);
-            if (len > 0) {
-                inLen += len;
-            } else if (len == 0) {
-                inEnd = 1;
+//        if (inLen < REFILL_THRESH && !inEnd) {
+//            memmove(inDataArray, inData, inLen);
+//            inData = inDataArray;
+//            int len = inFile.read(inData + inLen, IN_DATA_SIZE - inLen);
+//            if (len > 0) {
+//                inLen += len;
+//            } else if (len == 0) {
+//                inEnd = 1;
+//            }
+//        }
+//    }
+
+
+
+    while ((inLen = inFile.read(inDataArray, IN_DATA_SIZE)) > 0) {
+        inData = inDataArray;
+        while (inLen > 0) {
+            ret = av_parser_parse2(parserCtx, ctx, &pkt->data, &pkt->size, (uint8_t*)inData, inLen, AV_NOPTS_VALUE, AV_NOPTS_VALUE, 0);
+            if (ret < 0) {
+                ERROR_BUFFER(ret);
+                qDebug() << "av_parser_parse2 error" << errbuf;
+                goto end;
+            }
+
+            inData += ret;
+            inLen -= ret;
+
+            if (pkt->size > 0 && decode(ctx, pkt, frame, outFile) < 0) {
+                goto end;
             }
         }
     }
