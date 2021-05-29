@@ -189,7 +189,17 @@ void Demuxer::writeVideoFrame() {
 //    _vOutFile.write((char*)_frame->data[1], _frame->linesize[1] * _vOut->height >> 1);
 //    _vOutFile.write((char*)_frame->data[2], _frame->linesize[2] * _vOut->height >> 1);
 
-    int imageSize = av_image_get_buffer_size(_vOut->pixFmt, _vOut->width, _vOut->height, 1);
-    _vOutFile.write((char*)_frame->data[0], imageSize);
+//    int imageSize = av_image_get_buffer_size(_vOut->pixFmt, _vOut->width, _vOut->height, 1);
+//    _vOutFile.write((char*)_frame->data[0], imageSize);
+
+    qDebug() << _frame->linesize[0]
+            << _frame->linesize[1]
+            << _frame->linesize[2]
+            << _vOut->width
+            << _vOut->height;
+
+    _vOutFile.write((char*)_frame->data[0], (_frame->linesize[0] - 48) * _vOut->height);
+    _vOutFile.write((char*)_frame->data[1], (_frame->linesize[1] - 24) * _vOut->height >> 1);
+    _vOutFile.write((char*)_frame->data[2], (_frame->linesize[2] - 24) * _vOut->height >> 1);
 }
 
