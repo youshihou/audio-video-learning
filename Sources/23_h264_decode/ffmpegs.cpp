@@ -44,6 +44,42 @@ static int decode(AVCodecContext* ctx, AVPacket* pkt, AVFrame* frame, QFile &out
         }
 
         qDebug() << "the frame: " << ++frameIdx;
+//        qDebug() << frame->data[0] << frame->data[1] << frame->data[2];
+
+        /*
+            imageSize 590208
+            frame->data[0] 0x7fba76d88000  d88000
+            frame->data[1] 0x7fba76df2000  df2000
+            frame->data[2] 0x7fba76e0d000  e0d000
+            frame->data[1] - frame->data[0] = 434176  y
+            frame->data[2] - frame->data[1] = 110592  u
+
+            frame->linesize[0] = 896
+            frame->linesize[1] = 448
+            frame->linesize[2] = 448
+
+            y 848*464*1  = 393472
+            u 848*464*0.25 = 98368
+            v 848*464*0.25
+        */
+
+//        outFile.write((char*)frame->data[0], 393472);
+//        outFile.write((char*)frame->data[1], 98368);
+//        outFile.write((char*)frame->data[2], 98368);
+
+        qDebug() << frame->linesize[0]
+                << frame->linesize[1]
+                << frame->linesize[2]
+                << ctx->width << ctx->height;
+
+
+//        outFile.write((char*)frame->data[0], ctx->width * ctx->height);
+//        outFile.write((char*)frame->data[1], ctx->width * ctx->height >> 2);
+//        outFile.write((char*)frame->data[2], ctx->width * ctx->height >> 2);
+
+//        outFile.write((char*)frame->data[0], (frame->linesize[0] - 48) * ctx->height);
+//        outFile.write((char*)frame->data[1], (frame->linesize[1] - 24) * ctx->height >> 1);
+//        outFile.write((char*)frame->data[2], (frame->linesize[2] - 24) * ctx->height >> 1);
 
         int imageSize = av_image_get_buffer_size(ctx->pix_fmt, ctx->width, ctx->height, 1);
         qDebug() << imageSize;
@@ -101,6 +137,18 @@ void FFmpegs::h264Decode(const char *inFilename, VideoDecodeSpec &out) {
         qDebug() << "av_frame_alloc error";
         goto end;
     }
+
+//    av_image_alloc(frame->data, frame->linesize, 848, 464, AV_PIX_FMT_YUV420P, 1);
+//    qDebug() << frame->data[0] << frame->data[1] << frame->data[2];
+//    qDebug() << frame->linesize[0] << frame->linesize[1] << frame->linesize[2];
+//    /*
+//        0x7f9b944a4000  4a4000   393472
+//        0x7f9b94504100  504100
+//        0x7f9b9451c140  51c140   98368
+
+//        848 424 424
+//    */
+//    return;
 
     ret = avcodec_open2(ctx, codec, nullptr);
     if (ret < 0) {
