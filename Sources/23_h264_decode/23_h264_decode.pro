@@ -37,6 +37,6 @@ INCLUDEPATH += $${FFMPEG_HOME}/include
 
 LIBS += -L $${FFMPEG_HOME}/lib \
         -lavcodec \
-        -lavutil \
+        -lavutil
 
 

@@ -22,7 +22,7 @@ AudioThread::~AudioThread() {
 
 void AudioThread::run() {
     VideoDecodeSpec out;
-    out.filename = "/Users/ankui/Desktop/zzz/yuv/out_new.yuv";
+    out.filename = "/Users/ankui/Desktop/zzz/yuv/out2.yuv";
 
     FFmpegs::h264Decode("/Users/ankui/Desktop/zzz/yuv/out.h264", out);
 

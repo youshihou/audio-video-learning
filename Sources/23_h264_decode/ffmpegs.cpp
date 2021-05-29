@@ -43,7 +43,7 @@ static int decode(AVCodecContext* ctx, AVPacket* pkt, AVFrame* frame, QFile &out
             return ret;
         }
 
-        qDebug() << "frame: " << ++frameIdx;
+        qDebug() << "the frame: " << ++frameIdx;
 
         int imageSize = av_image_get_buffer_size(ctx->pix_fmt, ctx->width, ctx->height, 1);
         qDebug() << imageSize;
@@ -123,7 +123,9 @@ void FFmpegs::h264Decode(const char *inFilename, VideoDecodeSpec &out) {
         inEnd = !inLen;
         inData = inDataArray;
         while (inLen > 0 || inEnd) {
-            ret = av_parser_parse2(parserCtx, ctx, &pkt->data, &pkt->size, (uint8_t*)inData, inLen, AV_NOPTS_VALUE, AV_NOPTS_VALUE, 0);
+            ret = av_parser_parse2(parserCtx, ctx, &pkt->data,
+                                   &pkt->size, (uint8_t*)inData,
+                                   inLen, AV_NOPTS_VALUE, AV_NOPTS_VALUE, 0);
             if (ret < 0) {
                 ERROR_BUFFER(ret);
                 qDebug() << "av_parser_parse2 error" << errbuf;
