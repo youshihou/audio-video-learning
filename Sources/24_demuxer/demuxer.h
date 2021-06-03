@@ -41,12 +41,15 @@ private:
     VideoDecodeSpec *_vOut = nullptr;
     QFile _aOutFile, _vOutFile;
     AVFrame *_frame = nullptr;
+    uint8_t *_imgbuf[4] = { nullptr };
+    int _imglinesize[4] = { 0 };
+    int _imgsize = 0;
 
 
     int initAudioInfo();
     int initVideoInfo();
     int initDecoder(int* streamIdx, AVCodecContext** decodeCtx, AVMediaType type);
-    int decode(AVCodecContext *decodeCtx, AVPacket *pkt);
+    int decode(AVCodecContext *decodeCtx, AVPacket *pkt, void(Demuxer::*func)());
     void writeAudioFrame();
     void writeVideoFrame();
 };

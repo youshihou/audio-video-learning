@@ -75,9 +75,9 @@ void Demuxer::demux(const char *inFilename, AudioDecodeSpec &aOut, VideoDecodeSp
 
     while (av_read_frame(_fmtCtx, pkt) == 0) {
         if (pkt->stream_index == _aStreamIdx) {
-            ret = decode(_aDecodeCtx, pkt);
+            ret = decode(_aDecodeCtx, pkt, &Demuxer::writeAudioFrame);
         } else if (pkt->stream_index == _vStreamIdx) {
-            ret = decode(_vDecodeCtx, pkt);
+            ret = decode(_vDecodeCtx, pkt, &Demuxer::writeVideoFrame);
         }
         av_packet_unref(pkt);
         if (ret < 0) {
@@ -85,8 +85,8 @@ void Demuxer::demux(const char *inFilename, AudioDecodeSpec &aOut, VideoDecodeSp
         }
     }
 
-    decode(_aDecodeCtx, nullptr);
-    decode(_vDecodeCtx, nullptr);
+    decode(_aDecodeCtx, nullptr, &Demuxer::writeAudioFrame);
+    decode(_vDecodeCtx, nullptr, &Demuxer::writeVideoFrame);
 
 end:
     _aOutFile.close();
@@ -96,13 +96,12 @@ end:
     avformat_close_input(&_fmtCtx);
     av_frame_free(&_frame);
     av_packet_free(&pkt);
+    av_freep(&_imgbuf[0]);
 }
 
 int Demuxer::initAudioInfo() {
     int ret = initDecoder(&_aStreamIdx, &_aDecodeCtx, AVMEDIA_TYPE_AUDIO);
-    if (ret < 0) {
-        return ret;
-    }
+    RET(initDecoder);
 
     _aOutFile.setFileName(_aOut->filename);
     if (!_aOutFile.open(QFile::WriteOnly)) {
@@ -118,9 +117,7 @@ int Demuxer::initAudioInfo() {
 
 int Demuxer::initVideoInfo() {
     int ret = initDecoder(&_vStreamIdx, &_vDecodeCtx, AVMEDIA_TYPE_VIDEO);
-    if (ret < 0) {
-        return ret;
-    }
+    RET(initDecoder);
 
     _vOutFile.setFileName(_vOut->filename);
     if (!_vOutFile.open(QFile::WriteOnly)) {
@@ -130,7 +127,14 @@ int Demuxer::initVideoInfo() {
     _vOut->width = _vDecodeCtx->width;
     _vOut->height = _vDecodeCtx->height;
     _vOut->pixFmt = _vDecodeCtx->pix_fmt;
-    _vOut->fps = _vDecodeCtx->framerate.num;
+//    _vOut->fps = _vDecodeCtx->framerate.num;
+    AVRational framerate = av_guess_frame_rate(_fmtCtx, _fmtCtx->streams[_vStreamIdx], nullptr);
+    _vOut->fps = framerate.num / framerate.den;
+
+
+    ret = av_image_alloc(_imgbuf, _imglinesize, _vOut->width, _vOut->height, _vOut->pixFmt, 1);
+    RET(av_image_alloc);
+    _imgsize = ret;
 
     return 0;
 }
@@ -167,7 +171,7 @@ int Demuxer::initDecoder(int* streamIdx, AVCodecContext** decodeCtx, AVMediaType
     return 0;
 }
 
-int Demuxer::decode(AVCodecContext *decodeCtx, AVPacket *pkt) {
+int Demuxer::decode(AVCodecContext *decodeCtx, AVPacket *pkt, void (Demuxer::*func)()) {
     int ret = avcodec_send_packet(decodeCtx, pkt);
     RET(avcodec_send_packet);
 
@@ -178,12 +182,13 @@ int Demuxer::decode(AVCodecContext *decodeCtx, AVPacket *pkt) {
         }
         RET(avcodec_receive_frame);
 
-//        if (pkt->stream_index == _aStreamIdx) {
-        if (decodeCtx->codec->type == AVMEDIA_TYPE_AUDIO) {
-            writeAudioFrame();
-        } else if (decodeCtx->codec->type == AVMEDIA_TYPE_VIDEO) {
-            writeVideoFrame();
-        }
+//        if (decodeCtx->codec->type == AVMEDIA_TYPE_AUDIO) {
+//            writeAudioFrame();
+//        } else if (decodeCtx->codec->type == AVMEDIA_TYPE_VIDEO) {
+//            writeVideoFrame();
+//        }
+
+        (this->*func)();
     }
 }
 
@@ -199,14 +204,20 @@ void Demuxer::writeVideoFrame() {
 //    int imageSize = av_image_get_buffer_size(_vOut->pixFmt, _vOut->width, _vOut->height, 1);
 //    _vOutFile.write((char*)_frame->data[0], imageSize);
 
-    qDebug() << _frame->linesize[0]
-            << _frame->linesize[1]
-            << _frame->linesize[2]
-            << _vOut->width
-            << _vOut->height;
+//    qDebug() << _frame->linesize[0]
+//            << _frame->linesize[1]
+//            << _frame->linesize[2]
+//            << _vOut->width
+//            << _vOut->height;
 
-    _vOutFile.write((char*)_frame->data[0], (_frame->linesize[0] - 48) * _vOut->height);
-    _vOutFile.write((char*)_frame->data[1], (_frame->linesize[1] - 24) * _vOut->height >> 1);
-    _vOutFile.write((char*)_frame->data[2], (_frame->linesize[2] - 24) * _vOut->height >> 1);
+//    _vOutFile.write((char*)_frame->data[0], (_frame->linesize[0] - 48) * _vOut->height);
+//    _vOutFile.write((char*)_frame->data[1], (_frame->linesize[1] - 24) * _vOut->height >> 1);
+//    _vOutFile.write((char*)_frame->data[2], (_frame->linesize[2] - 24) * _vOut->height >> 1);
+
+
+    av_image_copy(_imgbuf, _imglinesize,
+                  (const uint8_t **)(_frame->data), _frame->linesize,
+                  _vOut->pixFmt, _vOut->width, _vOut->height);
+    _vOutFile.write((char *)_imgbuf[0], _imgsize);
 }
 
