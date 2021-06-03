@@ -33,6 +33,10 @@ static int decode(AVCodecContext* ctx, AVPacket* pkt, AVFrame* frame, QFile &out
         return ret;
     }
 
+    uint8_t *imgbuf[4] = { nullptr };
+    int imglinesize[4] = { 0 };
+    int imgsize = 0;
+
     while (true) {
         ret = avcodec_receive_frame(ctx, frame);
         if (ret == AVERROR(EAGAIN) || ret == AVERROR_EOF) {
@@ -67,19 +71,19 @@ static int decode(AVCodecContext* ctx, AVPacket* pkt, AVFrame* frame, QFile &out
 //        outFile.write((char*)frame->data[1], 98368);
 //        outFile.write((char*)frame->data[2], 98368);
 
-        qDebug() << frame->linesize[0]
-                << frame->linesize[1]
-                << frame->linesize[2]
-                << ctx->width << ctx->height;
+//        qDebug() << frame->linesize[0]
+//                << frame->linesize[1]
+//                << frame->linesize[2]
+//                << ctx->width << ctx->height;
 
 
 //        outFile.write((char*)frame->data[0], ctx->width * ctx->height);
 //        outFile.write((char*)frame->data[1], ctx->width * ctx->height >> 2);
 //        outFile.write((char*)frame->data[2], ctx->width * ctx->height >> 2);
 
-        outFile.write((char*)frame->data[0], (frame->linesize[0] - 48) * ctx->height);
-        outFile.write((char*)frame->data[1], (frame->linesize[1] - 24) * ctx->height >> 1);
-        outFile.write((char*)frame->data[2], (frame->linesize[2] - 24) * ctx->height >> 1);
+//        outFile.write((char*)frame->data[0], (frame->linesize[0] - 48) * ctx->height);
+//        outFile.write((char*)frame->data[1], (frame->linesize[1] - 24) * ctx->height >> 1);
+//        outFile.write((char*)frame->data[2], (frame->linesize[2] - 24) * ctx->height >> 1);
 
 //        int imageSize = av_image_get_buffer_size(ctx->pix_fmt, ctx->width, ctx->height, 1);
 //        qDebug() << imageSize;
@@ -88,6 +92,20 @@ static int decode(AVCodecContext* ctx, AVPacket* pkt, AVFrame* frame, QFile &out
 //        outFile.write((char*)frame->data[0], frame->linesize[0] * ctx->height);
 //        outFile.write((char*)frame->data[1], frame->linesize[1] * ctx->height >> 1);
 //        outFile.write((char*)frame->data[2], frame->linesize[2] * ctx->height >> 1);
+
+        ret = av_image_alloc(imgbuf, imglinesize, ctx->width, ctx->height, ctx->pix_fmt, 1);
+        if (ret < 0) {
+            ERROR_BUFFER(ret);
+            qDebug() << "av_image_alloc error" << errbuf;
+            av_freep(&imgbuf[0]);
+            return ret;
+        }
+        imgsize = ret;
+
+        av_image_copy(imgbuf, imglinesize,
+                      (const uint8_t **)(frame->data), frame->linesize,
+                      ctx->pix_fmt, ctx->width, ctx->height);
+        outFile.write((char *)imgbuf[0], imgsize);
     }
 }
 
