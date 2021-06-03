@@ -37,7 +37,7 @@ void Demuxer::demux(const char *inFilename, AudioDecodeSpec &aOut, VideoDecodeSp
     _vOut = &vOut;
 
     int ret = 0;
-    AVPacket pkt;
+    AVPacket *pkt = nullptr;
 
     ret = avformat_open_input(&_fmtCtx, inFilename, nullptr, nullptr);
     END(avformat_open_input);
@@ -64,16 +64,22 @@ void Demuxer::demux(const char *inFilename, AudioDecodeSpec &aOut, VideoDecodeSp
         goto end;
     }
 
-    av_init_packet(&pkt);
-    pkt.data = nullptr;
-    pkt.size = 0;
-    while (av_read_frame(_fmtCtx, &pkt) == 0) {
-        if (pkt.stream_index == _aStreamIdx) {
-            ret = decode(_aDecodeCtx, &pkt);
-        } else if (pkt.stream_index == _vStreamIdx) {
-            ret = decode(_vDecodeCtx, &pkt);
+
+    pkt = av_packet_alloc();
+    if (!pkt) {
+        qDebug() << "av_packet_alloc error";
+        goto end;
+    }
+    pkt->data = nullptr;
+    pkt->size = 0;
+
+    while (av_read_frame(_fmtCtx, pkt) == 0) {
+        if (pkt->stream_index == _aStreamIdx) {
+            ret = decode(_aDecodeCtx, pkt);
+        } else if (pkt->stream_index == _vStreamIdx) {
+            ret = decode(_vDecodeCtx, pkt);
         }
-        av_packet_unref(&pkt);
+        av_packet_unref(pkt);
         if (ret < 0) {
             goto end;
         }
@@ -89,6 +95,7 @@ end:
     avcodec_free_context(&_vDecodeCtx);
     avformat_close_input(&_fmtCtx);
     av_frame_free(&_frame);
+    av_packet_free(&pkt);
 }
 
 int Demuxer::initAudioInfo() {
