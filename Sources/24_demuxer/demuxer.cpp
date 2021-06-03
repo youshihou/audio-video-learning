@@ -112,6 +112,9 @@ int Demuxer::initAudioInfo() {
     _aOut->sampleFmt = _aDecodeCtx->sample_fmt;
     _aOut->chLayout = _aDecodeCtx->channel_layout;
 
+    _sampleSize = av_get_bytes_per_sample(_aOut->sampleFmt);
+    _sampleFrameSize = _sampleSize * _aDecodeCtx->channels;
+
     return 0;
 }
 
@@ -150,6 +153,12 @@ int Demuxer::initDecoder(int* streamIdx, AVCodecContext** decodeCtx, AVMediaType
         return -1;
     }
 
+//    AVCodec *decoder = nullptr;
+//    if (stream->codecpar->codec_id == AV_CODEC_ID_AAC) {
+//        decoder = avcodec_find_decoder_by_name("libfdk_aac");
+//    } else {
+//        decoder = avcodec_find_decoder(stream->codecpar->codec_id);
+//    }
     AVCodec *decoder = avcodec_find_decoder(stream->codecpar->codec_id);
     if (!decoder) {
         qDebug() << "decode not found" << stream->codecpar->codec_id;
@@ -193,7 +202,25 @@ int Demuxer::decode(AVCodecContext *decodeCtx, AVPacket *pkt, void (Demuxer::*fu
 }
 
 void Demuxer::writeAudioFrame() {
+    if (av_sample_fmt_is_planar(_aOut->sampleFmt)) {
+        for (int si = 0; si < _frame->nb_samples; si++) {
+            for (int ci = 0; ci < _aDecodeCtx->channels; ci++) {
+                char *begin = (char *)(_frame->data[ci] + si * _sampleSize);
+                _aOutFile.write(begin, _sampleSize);
+            }
+        }
 
+    } else {
+//        int v1 = _frame->linesize[0];
+//        int v2 = _frame->nb_samples * av_get_bytes_per_sample(_aOut->sampleFmt) * _aDecodeCtx->channels;
+//        if (v1 != v2) {
+//            qDebug() << "_frame->linesize[0]" << v1 << "_frame->nb_samples" << v2;
+//        }
+
+//        _aOutFile.write((char *)_frame->data[0], _frame->linesize[0]);
+
+        _aOutFile.write((char *)_frame->data[0], _frame->nb_samples * _sampleFrameSize);
+    }
 }
 
 void Demuxer::writeVideoFrame() {

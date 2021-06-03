@@ -44,6 +44,8 @@ private:
     uint8_t *_imgbuf[4] = { nullptr };
     int _imglinesize[4] = { 0 };
     int _imgsize = 0;
+    int _sampleSize = 0;
+    int _sampleFrameSize = 0;
 
 
     int initAudioInfo();
