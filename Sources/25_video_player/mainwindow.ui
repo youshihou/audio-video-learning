@@ -6,7 +6,7 @@
    <rect>
     <x>0</x>
     <y>0</y>
-    <width>734</width>
+    <width>780</width>
     <height>388</height>
    </rect>
   </property>
@@ -23,7 +23,7 @@
         <height>250</height>
        </size>
       </property>
-      <widget class="QWidget" name="page">
+      <widget class="QWidget" name="openfilePage">
        <layout class="QHBoxLayout" name="horizontalLayout_5">
         <item>
          <widget class="QPushButton" name="openfileButton">
@@ -40,7 +40,7 @@
         </item>
        </layout>
       </widget>
-      <widget class="QWidget" name="page_2">
+      <widget class="QWidget" name="videoPage">
        <layout class="QGridLayout" name="gridLayout">
         <item row="0" column="0">
          <widget class="VideoWidget" name="videoWidget" native="true"/>
@@ -248,7 +248,7 @@
     <rect>
      <x>0</x>
      <y>0</y>
-     <width>734</width>
+     <width>780</width>
      <height>24</height>
     </rect>
    </property>

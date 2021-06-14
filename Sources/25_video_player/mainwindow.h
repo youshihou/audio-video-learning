@@ -17,7 +17,9 @@ public:
     ~MainWindow();
 
 private slots:
-    void onPlayerstateChanged(VideoPlayer *player);
+    void onPlayerStateChanged(VideoPlayer *player);
+    void onPlayerInitFinished(VideoPlayer *player);
+    void onPlayerPlayFailed(VideoPlayer *player);
 
     void on_stopButton_clicked();
 
@@ -32,5 +34,7 @@ private slots:
 private:
     Ui::MainWindow *ui;
     VideoPlayer *_player = nullptr;
+
+    QString getTimeText(int value);
 };
 #endif // MAINWINDOW_H
