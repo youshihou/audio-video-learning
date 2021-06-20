@@ -1,6 +1,5 @@
 #include "videoplayer.h"
 #include <thread>
-#include <QDebug>
 #include <QThread>
 
 extern "C" {
@@ -8,35 +7,30 @@ extern "C" {
 }
 
 
-#define ERROR_BUFFER \
-    char errbuf[1024]; \
-    av_strerror(ret, errbuf, sizeof(errbuf));
 
-#define END(func) \
-    if (ret < 0) { \
-        ERROR_BUFFER; \
-        qDebug() << #func << "error:" << ret << errbuf; \
-        setState(Stopped); \
-        emit playFailed(this); \
-        goto end; \
+
+VideoPlayer::VideoPlayer(QObject *parent) : QObject(parent) {
+    if (SDL_Init(SDL_INIT_AUDIO)) {
+        qDebug() << "SDL_Init error" << SDL_GetError();
+        emit playFailed(this);
+        return;
     }
 
-#define RET(func) \
-    if (ret < 0) { \
-        ERROR_BUFFER; \
-        qDebug() << #func << "error" << errbuf; \
-        return ret; \
-    }
+    _aPktList = new std::list<AVPacket>();
+    _vPktList = new std::list<AVPacket>();
 
-
-
-VideoPlayer::VideoPlayer(QObject *parent) : QObject(parent)
-{
-
+    _aMutex = new CondMutex();
+    _vMutex = new CondMutex();
 }
 
 VideoPlayer::~VideoPlayer() {
+    delete _aPktList;
+    delete _vPktList;
 
+    delete _aMutex;
+    delete _vMutex;
+
+    SDL_Quit();
 }
 
 
@@ -76,6 +70,9 @@ VideoPlayer::State VideoPlayer::getState() {
 
 void VideoPlayer::setFilename(const char *filename) {
     _filename = filename;
+
+    // TODO: -
+    _filename = "/Users/ankui/Desktop/zzz/player/in.mp4";
 }
 
 int64_t VideoPlayer::getDuration() {
@@ -83,21 +80,6 @@ int64_t VideoPlayer::getDuration() {
 }
 
 #pragma mark - private method
-int VideoPlayer::initAudioInfo() {
-    int ret = initDecoder(&_aStream, &_aDecodeCtx, AVMEDIA_TYPE_AUDIO);
-    RET(initDecoder);
-
-    return 0;
-}
-
-int VideoPlayer::initVideoInfo() {
-    int ret = initDecoder(&_vStream, &_vDecodeCtx, AVMEDIA_TYPE_VIDEO);
-    RET(initDecoder);
-
-
-    return 0;
-}
-
 int VideoPlayer::initDecoder(AVStream** stream, AVCodecContext** decodeCtx, AVMediaType type) {
     int ret = av_find_best_stream(_fmtCtx, type, -1, -1, nullptr, 0);
     RET(av_find_best_stream);
@@ -140,7 +122,6 @@ void VideoPlayer::setState(State state) {
 
 void VideoPlayer::readFile() {
     int ret = 0;
-
     ret = avformat_open_input(&_fmtCtx, _filename, nullptr, nullptr);
     END(avformat_open_input);
 
@@ -160,19 +141,28 @@ void VideoPlayer::readFile() {
 
     emit initFinished(this);
 
-    AVPacket pkt;
-    while (av_read_frame(_fmtCtx, &pkt) == 0) {
-        if (pkt.stream_index == _aStream->index) {
-
-        } else if (pkt.stream_index == _vStream->index) {
-
+    while (true) {
+        AVPacket pkt;
+        ret = av_read_frame(_fmtCtx, &pkt);
+        if (ret == 0) {
+            if (pkt.stream_index == _aStream->index) {
+                addAudioPkt(pkt);
+            } else if (pkt.stream_index == _vStream->index) {
+                addVideoPkt(pkt);
+            }
+        } else {
+            continue;
         }
     }
 
 
 
 end:
-    avcodec_free_context(&_aDecodeCtx);
-    avcodec_free_context(&_vDecodeCtx);
-    avformat_close_input(&_fmtCtx);
+    ;
+//    avcodec_free_context(&_aDecodeCtx);
+//    avcodec_free_context(&_vDecodeCtx);
+//    avformat_close_input(&_fmtCtx);
 }
+
+
+
