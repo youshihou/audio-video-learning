@@ -11,11 +11,13 @@ CONFIG += c++11
 SOURCES += \
     condmutex.cpp \
     main.cpp \
-    mainwindow.cpp
+    mainwindow.cpp \
+    condmutex.cpp
 
 HEADERS += \
     condmutex.h \
-    mainwindow.h
+    mainwindow.h \
+    condmutex.h
 
 FORMS += \
     mainwindow.ui
