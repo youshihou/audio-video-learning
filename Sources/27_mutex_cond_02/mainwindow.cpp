@@ -11,7 +11,8 @@ MainWindow::MainWindow(QWidget *parent)
     ui->setupUi(this);
 
     _mutex = SDL_CreateMutex();
-    _cond = SDL_CreateCond();
+    _cond1 = SDL_CreateCond();
+    _cond2 = SDL_CreateCond();
 
     // produce
     _list = new std::list<QString>();
@@ -20,6 +21,11 @@ MainWindow::MainWindow(QWidget *parent)
     consume("consume2");
     consume("consume3");
     consume("consume4");
+
+    // produce
+    produce("produce1");
+    produce("produce2");
+    produce("produce3");
 }
 
 MainWindow::~MainWindow()
@@ -27,29 +33,33 @@ MainWindow::~MainWindow()
     delete ui;
     delete _list;
     SDL_DestroyMutex(_mutex);
-    SDL_DestroyCond(_cond);
+    SDL_DestroyCond(_cond1);
+    SDL_DestroyCond(_cond2);
 }
 
 
 void MainWindow::on_produceButton_clicked()
 {
-    produce("produce1");
-    produce("produce2");
-    produce("produce3");
+
 }
 
 void MainWindow::produce(QString name) {
-    std::thread([this, name](){
+    std::thread([this, name]() {
         SDL_LockMutex(_mutex);
 
-        qDebug() << name << "start produce";
+        while (true) {
+            qDebug() << name << "start produce";
 
-        _list->push_back(QString("%1").arg(++_index));
-        _list->push_back(QString("%1").arg(++_index));
-        _list->push_back(QString("%1").arg(++_index));
+            _list->push_back(QString("%1").arg(++_index));
+            _list->push_back(QString("%1").arg(++_index));
+            _list->push_back(QString("%1").arg(++_index));
 
-        // 唤醒等待_cond的线程
-        SDL_CondSignal(_cond);
+            // 唤醒消费者
+            SDL_CondSignal(_cond1);
+            // 等待被消费者唤醒
+            SDL_CondWait(_cond2, _mutex);
+        }
+
         SDL_UnlockMutex(_mutex);
     }).detach();
 }
@@ -59,7 +69,7 @@ void MainWindow::consume(QString name) {
         SDL_LockMutex(_mutex);
 
         while (true) {
-            qDebug() << name << "get lock";
+            qDebug() << name << "start consume";
 
             while (!_list->empty()) {
                 qDebug() << _list->front();
@@ -68,13 +78,10 @@ void MainWindow::consume(QString name) {
                 std::this_thread::sleep_for(std::chrono::milliseconds(1000));
             }
 
-            qDebug() << name << "start waiting...";
-
-            // _list是空的，进入等待
-            // 1.释放互斥锁
-            // 2.等待条件_cond
-            // 3.等到了条件_cond，加锁
-            SDL_CondWait(_cond, _mutex);
+            // 唤醒生产者
+            SDL_CondSignal(_cond2);
+            // 等待被生产者唤醒
+            SDL_CondWait(_cond1, _mutex);
         }
 
         SDL_UnlockMutex(_mutex);
