@@ -2,8 +2,10 @@
 #define MAINWINDOW_H
 
 #include <QMainWindow>
-#include <SDL2/SDL.h>
 #include <list>
+#include <SDL2/SDL.h>
+
+#include "condmutex.h"
 
 QT_BEGIN_NAMESPACE
 namespace Ui { class MainWindow; }
@@ -26,8 +28,10 @@ private:
     std::list<QString> *_list;
     int _index = 0;
 
-    SDL_mutex *_mutex = nullptr;
-    SDL_cond *_cond = nullptr;
+//    SDL_mutex *_mutex = nullptr;
+//    SDL_cond *_cond = nullptr;
+
+    CondMutex *_mutex = nullptr;
 
     void produce(QString name);
     void consume(QString name);
