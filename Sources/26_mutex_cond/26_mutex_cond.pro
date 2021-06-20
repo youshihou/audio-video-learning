@@ -12,12 +12,10 @@ SOURCES += \
     condmutex.cpp \
     main.cpp \
     mainwindow.cpp \
-    condmutex.cpp
 
 HEADERS += \
     condmutex.h \
     mainwindow.h \
-    condmutex.h
 
 FORMS += \
     mainwindow.ui
