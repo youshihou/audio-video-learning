@@ -38,11 +38,12 @@ VideoPlayer::~VideoPlayer() {
 void VideoPlayer::play() {
     if (_state == Playing) { return; }
 
-    // read file
-    std::thread([this]() {
-       readFile();
-    }).detach();
-
+    if (_state == Stopped) {
+        // read file
+        std::thread([this]() {
+           readFile();
+        }).detach();
+    }
 
     setState(Playing);
 }
@@ -58,6 +59,8 @@ void VideoPlayer::stop() {
 
 
     setState(Stopped);
+
+    free();
 }
 
 bool VideoPlayer::isPlaying() {
@@ -132,16 +135,22 @@ void VideoPlayer::readFile() {
     fflush(stderr);
 
     if (initAudioInfo() < 0) {
-        goto end;
+        emit playFailed(this);
+        free();
+        return;
     }
 
     if (initVideoInfo() < 0) {
-        goto end;
+        emit playFailed(this);
+        free();
+        return;
     }
 
     emit initFinished(this);
 
     while (true) {
+        if (_state == Stopped) { break; }
+
         AVPacket pkt;
         ret = av_read_frame(_fmtCtx, &pkt);
         if (ret == 0) {
@@ -154,15 +163,14 @@ void VideoPlayer::readFile() {
             continue;
         }
     }
-
-
-
-end:
-    ;
-//    avcodec_free_context(&_aDecodeCtx);
-//    avcodec_free_context(&_vDecodeCtx);
-//    avformat_close_input(&_fmtCtx);
 }
 
 
+void VideoPlayer::free() {
+    avformat_close_input(&_fmtCtx);
+
+
+    freeAudio();
+    freeVideo();
+}
 

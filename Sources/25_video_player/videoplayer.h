@@ -10,6 +10,7 @@ extern "C" {
 #include <libavcodec/avcodec.h>
 #include <libavformat/avformat.h>
 #include <libavutil/avutil.h>
+#include <libswresample/swresample.h>
 }
 
 
@@ -24,7 +25,8 @@ extern "C" {
         qDebug() << #func << "error:" << ret << errbuf; \
         setState(Stopped); \
         emit playFailed(this); \
-        goto end; \
+        free(); \
+        return; \
     }
 
 #define RET(func) \
@@ -72,17 +74,36 @@ private:
     /****************** Audio *******************/
     AVCodecContext *_aDecodeCtx = nullptr;
     AVStream *_aStream = nullptr;
-    AVFrame *_aFrame = nullptr;
     std::list<AVPacket> *_aPktList = nullptr;
     CondMutex *_aMutex = nullptr;
+    SwrContext *_aSwrCtx = nullptr;
+
+    typedef struct {
+        int sampleRate;
+        AVSampleFormat samplefmt;
+        int chLayout;
+        int chs;
+        int bytesPerSampleFrame;
+    } AudioSwrSpec;
+
+    AudioSwrSpec _aSwrInSpec;
+    AudioSwrSpec _aSwrOutSpec;
+    AVFrame *_aSwrInFrame = nullptr;
+    AVFrame *_aSwrOutFrame = nullptr;
+    int _aSwrOutIdx = 0;
+    int _aSwrOutSize = 0;
+
 
     int initAudioInfo();
+    int initSwr();
     int initSDL();
     void addAudioPkt(AVPacket &pkt);
     void clearAudioPktList();
     static void SDLAudioCallbackFunc(void *userdata, Uint8 *stream, int len);
     void SDLAudioCallback(Uint8 *stream, int len);
     int decodeAudio();
+    void freeAudio();
+
 
 
     /****************** Video *******************/
@@ -95,7 +116,7 @@ private:
     int initVideoInfo();
     void addVideoPkt(AVPacket &pkt);
     void clearVideoPktList();
-
+    void freeVideo();
 
 
 
@@ -109,6 +130,8 @@ private:
     int initDecoder(AVStream **stream, AVCodecContext** decodeCtx, AVMediaType type);
     void setState(State state);
     void readFile();
+    void free();
+
 
 };
 

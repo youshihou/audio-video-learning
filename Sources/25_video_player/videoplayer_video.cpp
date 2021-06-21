@@ -24,3 +24,7 @@ void VideoPlayer::clearVideoPktList() {
     }
     _vMutex->unlock();
 }
+
+void VideoPlayer::freeVideo() {
+
+}
