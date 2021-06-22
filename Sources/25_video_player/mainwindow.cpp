@@ -125,7 +125,7 @@ void MainWindow::on_muteButton_clicked()
         ui->muteButton->setText("mute");
     } else {
         _player->setMute(true);
-        ui->muteButton->setText("non-mute");
+        ui->muteButton->setText("nomute");
     }
 }
 
