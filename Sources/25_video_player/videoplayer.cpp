@@ -15,20 +15,10 @@ VideoPlayer::VideoPlayer(QObject *parent) : QObject(parent) {
         emit playFailed(this);
         return;
     }
-
-    _aPktList = new std::list<AVPacket>();
-    _vPktList = new std::list<AVPacket>();
-
-    _aMutex = new CondMutex();
-    _vMutex = new CondMutex();
 }
 
 VideoPlayer::~VideoPlayer() {
-    delete _aPktList;
-    delete _vPktList;
-
-    delete _aMutex;
-    delete _vMutex;
+    free();
 
     SDL_Quit();
 }
@@ -71,15 +61,40 @@ VideoPlayer::State VideoPlayer::getState() {
     return _state;
 }
 
+static int i = 0;
 void VideoPlayer::setFilename(const char *filename) {
     _filename = filename;
 
     // TODO: -
-    _filename = "/Users/ankui/Desktop/zzz/player/in.mp4";
+    if (i == 0) {
+        _filename = "/Users/ankui/Desktop/zzz/player/in.mp4";
+        i++;
+    } else if (i == 1) {
+        _filename = "/Users/ankui/Desktop/zzz/player/in2.mp4";
+        i++;
+    } else {
+        _filename = "/Users/ankui/Desktop/zzz/player/in.aac";
+    }
 }
 
 int64_t VideoPlayer::getDuration() {
     return _fmtCtx ? _fmtCtx->duration : 0;
+}
+
+void VideoPlayer::setVolumn(int volumn) {
+    _volumn = volumn;
+}
+
+int VideoPlayer::getVolumn() {
+    return _volumn;
+}
+
+void VideoPlayer::setMute(bool mute) {
+    _mute = mute;
+}
+
+bool VideoPlayer::isMute() {
+    return _mute;
 }
 
 #pragma mark - private method
@@ -134,13 +149,9 @@ void VideoPlayer::readFile() {
     av_dump_format(_fmtCtx, 0, _filename, 0);
     fflush(stderr);
 
-    if (initAudioInfo() < 0) {
-        emit playFailed(this);
-        free();
-        return;
-    }
-
-    if (initVideoInfo() < 0) {
+    bool noAudio = initAudioInfo() < 0;
+    bool noVideo = initVideoInfo() < 0;
+    if (noAudio && noVideo) {
         emit playFailed(this);
         free();
         return;
@@ -148,9 +159,7 @@ void VideoPlayer::readFile() {
 
     emit initFinished(this);
 
-    while (true) {
-        if (_state == Stopped) { break; }
-
+    while (_state != Stopped) {
         AVPacket pkt;
         ret = av_read_frame(_fmtCtx, &pkt);
         if (ret == 0) {
@@ -159,7 +168,12 @@ void VideoPlayer::readFile() {
             } else if (pkt.stream_index == _vStream->index) {
                 addVideoPkt(pkt);
             }
+        } else if (ret == AVERROR_EOF) {
+            qDebug() << "end of file....";
+            break;
         } else {
+            ERROR_BUFFER
+            qDebug() << "av_read_frame error" << errbuf;
             continue;
         }
     }
@@ -168,7 +182,6 @@ void VideoPlayer::readFile() {
 
 void VideoPlayer::free() {
     avformat_close_input(&_fmtCtx);
-
 
     freeAudio();
     freeVideo();

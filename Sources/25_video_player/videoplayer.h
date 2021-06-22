@@ -50,6 +50,12 @@ public:
         Paused
     } State;
 
+    typedef enum {
+        Min = 0,
+        Max = 100
+    } Volumn;
+
+
     explicit VideoPlayer(QObject *parent = nullptr);
     ~VideoPlayer();
 
@@ -62,7 +68,10 @@ public:
     State getState();
     void setFilename(const char *filename);
     int64_t getDuration();
-
+    void setVolumn(int volumn);
+    int getVolumn();
+    void setMute(bool mute);
+    bool isMute();
 
 signals:
     void stateChanged(VideoPlayer *player);
@@ -72,12 +81,6 @@ signals:
 
 private:
     /****************** Audio *******************/
-    AVCodecContext *_aDecodeCtx = nullptr;
-    AVStream *_aStream = nullptr;
-    std::list<AVPacket> *_aPktList = nullptr;
-    CondMutex *_aMutex = nullptr;
-    SwrContext *_aSwrCtx = nullptr;
-
     typedef struct {
         int sampleRate;
         AVSampleFormat samplefmt;
@@ -86,13 +89,19 @@ private:
         int bytesPerSampleFrame;
     } AudioSwrSpec;
 
+    AVCodecContext *_aDecodeCtx = nullptr;
+    AVStream *_aStream = nullptr;
+    std::list<AVPacket> _aPktList;
+    CondMutex _aMutex;
+    SwrContext *_aSwrCtx = nullptr;
     AudioSwrSpec _aSwrInSpec;
     AudioSwrSpec _aSwrOutSpec;
     AVFrame *_aSwrInFrame = nullptr;
     AVFrame *_aSwrOutFrame = nullptr;
     int _aSwrOutIdx = 0;
     int _aSwrOutSize = 0;
-
+    int _volumn = Max;
+    bool _mute = false;
 
     int initAudioInfo();
     int initSwr();
@@ -110,8 +119,8 @@ private:
     AVCodecContext *_vDecodeCtx = nullptr;
     AVStream *_vStream = nullptr;
     AVFrame *_vFrame = nullptr;
-    std::list<AVPacket> *_vPktList = nullptr;
-    CondMutex *_vMutex = nullptr;
+    std::list<AVPacket> _vPktList;
+    CondMutex _vMutex;
 
     int initVideoInfo();
     void addVideoPkt(AVPacket &pkt);

@@ -83,18 +83,19 @@ int VideoPlayer::initSDL() {
 }
 
 void VideoPlayer::addAudioPkt(AVPacket &pkt) {
-    _aMutex->lock();
-    _aPktList->push_back(pkt);
-    _aMutex->signal();
-    _aMutex->unlock();
+    _aMutex.lock();
+    _aPktList.push_back(pkt);
+    _aMutex.signal();
+    _aMutex.unlock();
 }
 
 void VideoPlayer::clearAudioPktList() {
-    _aMutex->lock();
-    for (AVPacket &pkt : *_aPktList) {
+    _aMutex.lock();
+    for (AVPacket &pkt : _aPktList) {
         av_packet_unref(&pkt);
     }
-    _aMutex->unlock();
+    _aPktList.clear();
+    _aMutex.unlock();
 }
 
 void VideoPlayer::freeAudio() {
@@ -134,7 +135,8 @@ void VideoPlayer::SDLAudioCallback(Uint8 *stream, int len) {
         }
         int fillLen = _aSwrOutSize - _aSwrOutIdx;
         fillLen = std::min(fillLen, len);
-        SDL_MixAudio(stream, _aSwrOutFrame->data[0] + _aSwrOutIdx, fillLen, SDL_MIX_MAXVOLUME);
+        int volumn = _mute ? 0 : ((_volumn * 1.0 / Max) * SDL_MIX_MAXVOLUME);
+        SDL_MixAudio(stream, _aSwrOutFrame->data[0] + _aSwrOutIdx, fillLen, volumn);
         len -= fillLen;
         stream += fillLen;
         _aSwrOutIdx += fillLen;
@@ -142,19 +144,19 @@ void VideoPlayer::SDLAudioCallback(Uint8 *stream, int len) {
 }
 
 int VideoPlayer::decodeAudio() {
-    _aMutex->lock();
-//    while (_aPktList->empty()) {
-//        _aMutex->wait();
+    _aMutex.lock();
+//    while (_aPktList.empty()) {
+//        _aMutex.wait();
 //    }
 
-    if (_aPktList->empty() || _state == Stopped) {
-        _aMutex->unlock();
+    if (_aPktList.empty() || _state == Stopped) {
+        _aMutex.unlock();
         return 0;
     }
 
-    AVPacket pkt = _aPktList->front();
-    _aPktList->pop_front();
-    _aMutex->unlock();
+    AVPacket pkt = _aPktList.front();
+    _aPktList.pop_front();
+    _aMutex.unlock();
 
     int ret = avcodec_send_packet(_aDecodeCtx, &pkt);
     av_packet_unref(&pkt);

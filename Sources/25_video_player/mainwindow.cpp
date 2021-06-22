@@ -10,6 +10,10 @@ MainWindow::MainWindow(QWidget *parent)
 {
     ui->setupUi(this);
 
+    ui->volumnSlider->setRange(VideoPlayer::Volumn::Min, VideoPlayer::Volumn::Max);
+    ui->volumnSlider->setValue(ui->volumnSlider->maximum());
+
+
     _player = new VideoPlayer();
     connect(_player, &VideoPlayer::stateChanged, this, &MainWindow::onPlayerStateChanged);
     connect(_player, &VideoPlayer::initFinished, this, &MainWindow::onPlayerInitFinished);
@@ -101,6 +105,7 @@ void MainWindow::on_currentSlider_valueChanged(int value)
 void MainWindow::on_volumnSlider_valueChanged(int value)
 {
     ui->volumnLabel->setText(QString("%1").arg(value));
+    _player->setVolumn(value);
 }
 
 void MainWindow::on_playButton_clicked()
@@ -110,6 +115,17 @@ void MainWindow::on_playButton_clicked()
         _player->pause();
     } else {
         _player->play();
+    }
+}
+
+void MainWindow::on_muteButton_clicked()
+{
+    if (_player->isMute()) {
+        _player->setMute(false);
+        ui->muteButton->setText("mute");
+    } else {
+        _player->setMute(true);
+        ui->muteButton->setText("non-mute");
     }
 }
 
