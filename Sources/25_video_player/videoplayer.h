@@ -11,6 +11,7 @@ extern "C" {
 #include <libavformat/avformat.h>
 #include <libavutil/avutil.h>
 #include <libswresample/swresample.h>
+#include <libswscale/swscale.h>
 }
 
 
@@ -19,22 +20,18 @@ extern "C" {
     char errbuf[1024]; \
     av_strerror(ret, errbuf, sizeof(errbuf));
 
-#define END(func) \
+#define CODE(func, code) \
     if (ret < 0) { \
         ERROR_BUFFER; \
         qDebug() << #func << "error:" << ret << errbuf; \
-        setState(Stopped); \
-        emit playFailed(this); \
-        free(); \
-        return; \
+        code; \
     }
 
-#define RET(func) \
-    if (ret < 0) { \
-        ERROR_BUFFER; \
-        qDebug() << #func << "error" << errbuf; \
-        return ret; \
-    }
+
+#define END(func) CODE(func, fatalError(); return;)
+#define RET(func) CODE(func, return ret;)
+#define CONTINUE(func) CODE(func, continue;)
+#define BREAK(func) CODE(func, break;)
 
 
 
@@ -44,6 +41,9 @@ class VideoPlayer : public QObject
 {
     Q_OBJECT
 public:
+    explicit VideoPlayer(QObject *parent = nullptr);
+    ~VideoPlayer();
+
     typedef enum {
         Stopped = 0,
         Playing,
@@ -56,9 +56,11 @@ public:
     } Volumn;
 
 
-    explicit VideoPlayer(QObject *parent = nullptr);
-    ~VideoPlayer();
-
+    typedef struct {
+        int width;
+        int height;
+        AVPixelFormat pixFmt;
+    } VideoSwsSpec;
 
     void play();
     void pause();
@@ -66,7 +68,7 @@ public:
     bool isPlaying();
 
     State getState();
-    void setFilename(const char *filename);
+    void setFilename(QString &filename);
     int64_t getDuration();
     void setVolumn(int volumn);
     int getVolumn();
@@ -77,6 +79,7 @@ signals:
     void stateChanged(VideoPlayer *player);
     void initFinished(VideoPlayer *player);
     void playFailed(VideoPlayer *player);
+    void frameDecoded(VideoPlayer *player, uint8_t *data, VideoSwsSpec &spec);
 
 
 private:
@@ -94,10 +97,10 @@ private:
     std::list<AVPacket> _aPktList;
     CondMutex _aMutex;
     SwrContext *_aSwrCtx = nullptr;
-    AudioSwrSpec _aSwrInSpec;
-    AudioSwrSpec _aSwrOutSpec;
     AVFrame *_aSwrInFrame = nullptr;
     AVFrame *_aSwrOutFrame = nullptr;
+    AudioSwrSpec _aSwrInSpec;
+    AudioSwrSpec _aSwrOutSpec;
     int _aSwrOutIdx = 0;
     int _aSwrOutSize = 0;
     int _volumn = Max;
@@ -111,7 +114,6 @@ private:
     static void SDLAudioCallbackFunc(void *userdata, Uint8 *stream, int len);
     void SDLAudioCallback(Uint8 *stream, int len);
     int decodeAudio();
-    void freeAudio();
 
 
 
@@ -121,18 +123,25 @@ private:
     AVFrame *_vFrame = nullptr;
     std::list<AVPacket> _vPktList;
     CondMutex _vMutex;
+    SwsContext *_vSwsCtx = nullptr;
+    AVFrame *_vSwsInFrame = nullptr;
+    AVFrame *_vSwsOutFrame = nullptr;
+    VideoSwsSpec _vSwsOutSpec;
+
+
 
     int initVideoInfo();
+    int initSws();
     void addVideoPkt(AVPacket &pkt);
     void clearVideoPktList();
-    void freeVideo();
+    void decodeVideo();
 
 
 
 
     /****************** Other *******************/
     State _state = Stopped;
-    const char *_filename;
+    char _filename[512];
     AVFormatContext *_fmtCtx = nullptr;
 
 
@@ -140,7 +149,9 @@ private:
     void setState(State state);
     void readFile();
     void free();
-
+    void freeAudio();
+    void freeVideo();
+    void fatalError();
 
 };
 

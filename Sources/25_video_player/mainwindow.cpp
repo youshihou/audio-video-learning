@@ -10,14 +10,18 @@ MainWindow::MainWindow(QWidget *parent)
 {
     ui->setupUi(this);
 
-    ui->volumnSlider->setRange(VideoPlayer::Volumn::Min, VideoPlayer::Volumn::Max);
-    ui->volumnSlider->setValue(ui->volumnSlider->maximum());
+
+    qRegisterMetaType<VideoPlayer::VideoSwsSpec>("VideoSwsSpec&");
 
 
     _player = new VideoPlayer();
     connect(_player, &VideoPlayer::stateChanged, this, &MainWindow::onPlayerStateChanged);
     connect(_player, &VideoPlayer::initFinished, this, &MainWindow::onPlayerInitFinished);
     connect(_player, &VideoPlayer::playFailed, this, &MainWindow::onPlayerPlayFailed);
+    connect(_player, &VideoPlayer::frameDecoded, ui->videoWidget, &VideoWidget::onPlayerFrameDecoded);
+
+    ui->volumnSlider->setRange(VideoPlayer::Volumn::Min, VideoPlayer::Volumn::Max);
+    ui->volumnSlider->setValue(ui->volumnSlider->maximum());
 }
 
 MainWindow::~MainWindow()
@@ -93,7 +97,7 @@ void MainWindow::on_openfileButton_clicked()
 //        qDebug() << filename;
 //    }
 
-    _player->setFilename(filename.toUtf8().data());
+    _player->setFilename(filename);
     _player->play();
 }
 

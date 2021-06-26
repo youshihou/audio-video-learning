@@ -1,11 +1,61 @@
 #include "videoplayer.h"
+#include <thread>
+#include <QDebug>
 
+
+extern "C" {
+#include <libavutil/imgutils.h>
+}
 
 
 int VideoPlayer::initVideoInfo() {
     int ret = initDecoder(&_vStream, &_vDecodeCtx, AVMEDIA_TYPE_VIDEO);
     RET(initDecoder);
 
+    ret = initSws();
+    RET(initSws);
+
+    std::thread([this]() {
+        decodeVideo();
+    }).detach();
+
+    return 0;
+}
+
+int VideoPlayer::initSws() {
+    int inWidth = _vDecodeCtx->width;
+    int inHeight = _vDecodeCtx->height;
+    _vSwsOutSpec.width = inWidth >> 4 << 4;
+    _vSwsOutSpec.height = inHeight >> 4 << 4;
+    _vSwsOutSpec.pixFmt = AV_PIX_FMT_RGB24;
+
+    _vSwsCtx = sws_getContext(inWidth, inHeight, _vDecodeCtx->pix_fmt,
+                              _vSwsOutSpec.width, _vSwsOutSpec.height, _vSwsOutSpec.pixFmt,
+                              SWS_BILINEAR, nullptr, nullptr, nullptr);
+    if (!_vSwsCtx) {
+        qDebug() << "sws_getContext error";
+        return -1;
+    }
+
+    _vSwsInFrame = av_frame_alloc();
+    if (!_vSwsInFrame) {
+        qDebug() << "av_frame_alloc error";
+        return -1;
+    }
+
+    _vSwsOutFrame = av_frame_alloc();
+    if (!_vSwsOutFrame) {
+        qDebug() << "av_frame_alloc error";
+        return -1;
+    }
+
+    int ret = av_image_alloc(_vSwsOutFrame->data,
+                             _vSwsOutFrame->linesize,
+                             _vSwsOutSpec.width,
+                             _vSwsOutSpec.height,
+                             _vSwsOutSpec.pixFmt,
+                             1);
+    RET(av_image_alloc);
 
     return 0;
 }
@@ -28,4 +78,39 @@ void VideoPlayer::clearVideoPktList() {
 
 void VideoPlayer::freeVideo() {
 
+}
+
+void VideoPlayer::decodeVideo() {
+    while (true) {
+        _vMutex.lock();
+        if (_vPktList.empty()) {
+            _vMutex.unlock();
+            continue;
+        }
+
+        AVPacket pkt = _vPktList.front();
+        _vPktList.pop_front();
+        _vMutex.unlock();
+
+        int ret = avcodec_send_packet(_vDecodeCtx, &pkt);
+        av_packet_unref(&pkt);
+        CONTINUE(avcodec_send_packet);
+
+        while (true) {
+            ret = avcodec_receive_frame(_vDecodeCtx, _vSwsInFrame);
+            if (ret == AVERROR(EAGAIN) || ret == AVERROR_EOF) {
+                break;
+            } else BREAK(avcodec_receive_frame);
+
+
+            SDL_Delay(33);
+
+            sws_scale(_vSwsCtx,
+                      _vSwsInFrame->data, _vSwsInFrame->linesize,
+                      0, _vDecodeCtx->height,
+                      _vSwsOutFrame->data, _vSwsOutFrame->linesize);
+
+            emit frameDecoded(this, _vSwsOutFrame->data[0], _vSwsOutSpec);
+        }
+    }
 }

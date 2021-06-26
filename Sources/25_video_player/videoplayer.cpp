@@ -61,20 +61,9 @@ VideoPlayer::State VideoPlayer::getState() {
     return _state;
 }
 
-static int i = 0;
-void VideoPlayer::setFilename(const char *filename) {
-    _filename = filename;
-
-    // TODO: -
-    if (i == 0) {
-        _filename = "/Users/ankui/Desktop/zzz/player/in.mp4";
-        i++;
-    } else if (i == 1) {
-        _filename = "/Users/ankui/Desktop/zzz/player/in2.mp4";
-        i++;
-    } else {
-        _filename = "/Users/ankui/Desktop/zzz/player/in.aac";
-    }
+void VideoPlayer::setFilename(QString &filename) {
+    const char *name = filename.toUtf8().data();
+    memcpy(_filename, name, strlen(name) + 1);
 }
 
 int64_t VideoPlayer::getDuration() {
@@ -152,8 +141,7 @@ void VideoPlayer::readFile() {
     bool noAudio = initAudioInfo() < 0;
     bool noVideo = initVideoInfo() < 0;
     if (noAudio && noVideo) {
-        emit playFailed(this);
-        free();
+        fatalError();
         return;
     }
 
@@ -187,3 +175,9 @@ void VideoPlayer::free() {
     freeVideo();
 }
 
+
+void VideoPlayer::fatalError() {
+    setState(Stopped);
+    emit playFailed(this);
+    free();
+}
