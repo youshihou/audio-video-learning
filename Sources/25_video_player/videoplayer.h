@@ -69,7 +69,8 @@ public:
 
     State getState();
     void setFilename(QString &filename);
-    int64_t getDuration();
+    int getDuration();
+    int getCurrent();
     void setVolumn(int volumn);
     int getVolumn();
     void setMute(bool mute);
@@ -77,6 +78,7 @@ public:
 
 signals:
     void stateChanged(VideoPlayer *player);
+    void timeChanged(VideoPlayer *player);
     void initFinished(VideoPlayer *player);
     void playFailed(VideoPlayer *player);
     void frameDecoded(VideoPlayer *player, uint8_t *data, VideoSwsSpec &spec);
@@ -103,8 +105,9 @@ private:
     AudioSwrSpec _aSwrOutSpec;
     int _aSwrOutIdx = 0;
     int _aSwrOutSize = 0;
-    int _volumn = Max;
-    bool _mute = false;
+    double _aClock = 0;
+
+
 
     int initAudioInfo();
     int initSwr();
@@ -127,6 +130,7 @@ private:
     AVFrame *_vSwsInFrame = nullptr;
     AVFrame *_vSwsOutFrame = nullptr;
     VideoSwsSpec _vSwsOutSpec;
+    double _vClock = 0;
 
 
 
@@ -143,7 +147,8 @@ private:
     State _state = Stopped;
     char _filename[512];
     AVFormatContext *_fmtCtx = nullptr;
-
+    int _volumn = Max;
+    bool _mute = false;
 
     int initDecoder(AVStream **stream, AVCodecContext** decodeCtx, AVMediaType type);
     void setState(State state);

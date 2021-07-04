@@ -8,6 +8,9 @@ extern "C" {
 
 
 
+#define AUDIO_MAX_PKT_SIZE 1000
+#define VIDEO_MAX_PKT_SIZE 500
+
 
 VideoPlayer::VideoPlayer(QObject *parent) : QObject(parent) {
     if (SDL_Init(SDL_INIT_AUDIO)) {
@@ -33,9 +36,10 @@ void VideoPlayer::play() {
         std::thread([this]() {
            readFile();
         }).detach();
-    }
 
-    setState(Playing);
+    } else {
+        setState(Playing);
+    }
 }
 
 void VideoPlayer::pause() {
@@ -47,10 +51,13 @@ void VideoPlayer::pause() {
 void VideoPlayer::stop() {
     if (_state == Stopped) { return; }
 
-
     setState(Stopped);
 
-    free();
+//    free();
+    std::thread([this](){
+        SDL_Delay(100);
+        free();
+    }).detach();
 }
 
 bool VideoPlayer::isPlaying() {
@@ -63,11 +70,16 @@ VideoPlayer::State VideoPlayer::getState() {
 
 void VideoPlayer::setFilename(QString &filename) {
     const char *name = filename.toUtf8().data();
+//    const char *name = filename.toStdString().c_str();
     memcpy(_filename, name, strlen(name) + 1);
 }
 
-int64_t VideoPlayer::getDuration() {
-    return _fmtCtx ? _fmtCtx->duration : 0;
+int VideoPlayer::getDuration() {
+    return _fmtCtx ? round(_fmtCtx->duration / 1000000.0) : 0;
+}
+
+int VideoPlayer::getCurrent() {
+    return round(_aClock);
 }
 
 void VideoPlayer::setVolumn(int volumn) {
@@ -147,14 +159,24 @@ void VideoPlayer::readFile() {
 
     emit initFinished(this);
 
+    setState(Playing);
+
     while (_state != Stopped) {
         AVPacket pkt;
+
+        if (_vPktList.size() >= VIDEO_MAX_PKT_SIZE || _aPktList.size() >= AUDIO_MAX_PKT_SIZE) {
+            SDL_Delay(10);
+            continue;
+        }
+
         ret = av_read_frame(_fmtCtx, &pkt);
         if (ret == 0) {
             if (pkt.stream_index == _aStream->index) {
                 addAudioPkt(pkt);
             } else if (pkt.stream_index == _vStream->index) {
                 addVideoPkt(pkt);
+            } else {
+                av_packet_unref(&pkt);
             }
         } else if (ret == AVERROR_EOF) {
             qDebug() << "end of file....";

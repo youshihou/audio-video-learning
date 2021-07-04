@@ -16,9 +16,13 @@ MainWindow::MainWindow(QWidget *parent)
 
     _player = new VideoPlayer();
     connect(_player, &VideoPlayer::stateChanged, this, &MainWindow::onPlayerStateChanged);
+    connect(_player, &VideoPlayer::timeChanged, this, &MainWindow::onPlayerTimeChanged);
     connect(_player, &VideoPlayer::initFinished, this, &MainWindow::onPlayerInitFinished);
     connect(_player, &VideoPlayer::playFailed, this, &MainWindow::onPlayerPlayFailed);
+
     connect(_player, &VideoPlayer::frameDecoded, ui->videoWidget, &VideoWidget::onPlayerFrameDecoded);
+    connect(_player, &VideoPlayer::stateChanged, ui->videoWidget, &VideoWidget::onPlayerStateChanged);
+
 
     ui->volumnSlider->setRange(VideoPlayer::Volumn::Min, VideoPlayer::Volumn::Max);
     ui->volumnSlider->setValue(ui->volumnSlider->maximum());
@@ -36,10 +40,14 @@ void MainWindow::onPlayerPlayFailed(VideoPlayer *player) {
 }
 
 void MainWindow::onPlayerInitFinished(VideoPlayer *player) {
-    int64_t microSeconds = player->getDuration();
+    int microSeconds = player->getDuration();
     ui->currentSlider->setRange(0, microSeconds);
 
     ui->durationLabel->setText(getTimeText(microSeconds));
+}
+
+void MainWindow::onPlayerTimeChanged(VideoPlayer( *player)) {
+    ui->currentSlider->setValue(player->getCurrent());
 }
 
 void MainWindow::onPlayerStateChanged(VideoPlayer *player) {
@@ -134,11 +142,16 @@ void MainWindow::on_muteButton_clicked()
 }
 
 QString MainWindow::getTimeText(int value) {
-    int64_t seconds = value / 1000000;
-    int h = seconds / 3600;
-//    int m = (seconds % 3600) / 60;
-    int m = (seconds / 60) % 60;
-    int s = seconds % 60;
+//    int64_t seconds = value / 1000000;
+//    int h = seconds / 3600;
+////    int m = (seconds % 3600) / 60;
+//    int m = (seconds / 60) % 60;
+//    int s = seconds % 60;
+
+    int h = value / 3600;
+//    int m = (value % 3600) / 60;
+    int m = (value / 60) % 60;
+    int s = value % 60;
 
 //    QString qh = QString("0%1").arg(h).right(2);
 //    QString qm = QString("0%1").arg(m).right(2);

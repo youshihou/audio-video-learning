@@ -8,18 +8,12 @@ VideoWidget::VideoWidget(QWidget *parent) : QWidget(parent) {
 }
 
 VideoWidget::~VideoWidget() {
-    if (_image) {
-        delete _image;
-        _image = nullptr;
-    }
+    freeImage();
 }
 
 
 void VideoWidget::onPlayerFrameDecoded(VideoPlayer *player, uint8_t *data, VideoPlayer::VideoSwsSpec &spec) {
-    if (_image) {
-        delete _image;
-        _image = nullptr;
-    }
+    freeImage();
 
     if (data != nullptr) {
         _image = new QImage((uchar *)data,
@@ -52,6 +46,21 @@ void VideoWidget::onPlayerFrameDecoded(VideoPlayer *player, uint8_t *data, Video
 
 
     update();
+}
+
+void VideoWidget::onPlayerStateChanged(VideoPlayer* player) {
+    if (player->getState() != VideoPlayer::Stopped) { return; }
+
+    freeImage();
+    update();
+}
+
+void VideoWidget::freeImage() {
+    if (_image) {
+        av_free(_image->bits());
+        delete _image;
+        _image = nullptr;
+    }
 }
 
 

@@ -99,8 +99,10 @@ void VideoPlayer::clearAudioPktList() {
 }
 
 void VideoPlayer::freeAudio() {
+    _aClock = 0;
     _aSwrOutIdx = 0;
     _aSwrOutSize = 0;
+    _aStream = nullptr;
 
     clearAudioPktList();
     avcodec_free_context(&_aDecodeCtx);
@@ -149,7 +151,7 @@ int VideoPlayer::decodeAudio() {
 //        _aMutex.wait();
 //    }
 
-    if (_aPktList.empty() || _state == Stopped) {
+    if (_aPktList.empty()) {
         _aMutex.unlock();
         return 0;
     }
@@ -157,6 +159,12 @@ int VideoPlayer::decodeAudio() {
     AVPacket pkt = _aPktList.front();
     _aPktList.pop_front();
     _aMutex.unlock();
+
+    if (pkt.pts != AV_NOPTS_VALUE) {
+        _aClock = av_q2d(_aStream->time_base) * pkt.pts;
+
+        emit timeChanged(this);
+    }
 
     int ret = avcodec_send_packet(_aDecodeCtx, &pkt);
     av_packet_unref(&pkt);

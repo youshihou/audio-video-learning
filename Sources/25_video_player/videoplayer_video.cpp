@@ -77,11 +77,23 @@ void VideoPlayer::clearVideoPktList() {
 }
 
 void VideoPlayer::freeVideo() {
-
+    clearVideoPktList();
+    avcodec_free_context(&_vDecodeCtx);
+    av_frame_free(&_vSwsInFrame);
+    if (_vSwsOutFrame) {
+        av_freep(&_vSwsOutFrame->data[0]);
+        av_frame_free(&_vSwsOutFrame);
+    }
+    sws_freeContext(_vSwsCtx);
+    _vSwsCtx = nullptr;
+    _vStream = nullptr;
+    _vClock = 0;
 }
 
 void VideoPlayer::decodeVideo() {
     while (true) {
+        if (_state == Stopped) { break; }
+
         _vMutex.lock();
         if (_vPktList.empty()) {
             _vMutex.unlock();
@@ -93,6 +105,11 @@ void VideoPlayer::decodeVideo() {
         _vMutex.unlock();
 
         int ret = avcodec_send_packet(_vDecodeCtx, &pkt);
+
+        if (pkt.dts != AV_NOPTS_VALUE) {
+            _vClock = av_q2d(_vStream->time_base) * pkt.dts;
+        }
+
         av_packet_unref(&pkt);
         CONTINUE(avcodec_send_packet);
 
@@ -102,13 +119,18 @@ void VideoPlayer::decodeVideo() {
                 break;
             } else BREAK(avcodec_receive_frame);
 
-
-            SDL_Delay(33);
-
             sws_scale(_vSwsCtx,
                       _vSwsInFrame->data, _vSwsInFrame->linesize,
                       0, _vDecodeCtx->height,
                       _vSwsOutFrame->data, _vSwsOutFrame->linesize);
+
+            if (_aStream != nullptr) {
+                while (_vClock > _aClock && _state == Playing) {
+                    SDL_Delay(5);
+                }
+            } else {
+
+            }
 
             emit frameDecoded(this, _vSwsOutFrame->data[0], _vSwsOutSpec);
         }
