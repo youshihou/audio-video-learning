@@ -21,8 +21,7 @@ VideoPlayer::VideoPlayer(QObject *parent) : QObject(parent) {
 }
 
 VideoPlayer::~VideoPlayer() {
-    free();
-
+    stop();
     SDL_Quit();
 }
 
@@ -51,13 +50,16 @@ void VideoPlayer::pause() {
 void VideoPlayer::stop() {
     if (_state == Stopped) { return; }
 
-    setState(Stopped);
+    _state = Stopped;
 
-//    free();
-    std::thread([this](){
-        SDL_Delay(100);
-        free();
-    }).detach();
+    free();
+
+    emit stateChanged(this);
+
+//    std::thread([this](){
+//        SDL_Delay(100);
+//        free();
+//    }).detach();
 }
 
 bool VideoPlayer::isPlaying() {
@@ -75,11 +77,18 @@ void VideoPlayer::setFilename(QString &filename) {
 }
 
 int VideoPlayer::getDuration() {
-    return _fmtCtx ? round(_fmtCtx->duration / 1000000.0) : 0;
+//    return _fmtCtx ? round(_fmtCtx->duration / 1000000.0) : 0;
+    return _fmtCtx ? round(_fmtCtx->duration * av_q2d(AV_TIME_BASE_Q)) : 0;
 }
 
-int VideoPlayer::getCurrent() {
-    return round(_aClock);
+int VideoPlayer::getTime() {
+    return round(_aTime);
+}
+
+void VideoPlayer::setTime(int seekTime) {
+    _seekTime = seekTime;
+
+
 }
 
 void VideoPlayer::setVolumn(int volumn) {
@@ -150,9 +159,9 @@ void VideoPlayer::readFile() {
     av_dump_format(_fmtCtx, 0, _filename, 0);
     fflush(stderr);
 
-    bool noAudio = initAudioInfo() < 0;
-    bool noVideo = initVideoInfo() < 0;
-    if (noAudio && noVideo) {
+    _hasAudio = initAudioInfo() < 0;
+    _hasVideo = initVideoInfo() < 0;
+    if (!_hasAudio && !_hasVideo) {
         fatalError();
         return;
     }
@@ -161,11 +170,38 @@ void VideoPlayer::readFile() {
 
     setState(Playing);
 
+    SDL_PauseAudio(0);
+
+    std::thread([this]() {
+        decodeVideo();
+    }).detach();
+
+    AVPacket pkt;
     while (_state != Stopped) {
-        AVPacket pkt;
+        if (_seekTime >= 0) {
+            int streamIdx;
+            if (_hasAudio) {
+                streamIdx = _aStream->index;
+            } else {
+                streamIdx = _vStream->index;
+            }
+            AVRational timebase = _fmtCtx->streams[streamIdx]->time_base;
+            int64_t ts = _seekTime / av_q2d(timebase);
+            ret = av_seek_frame(_fmtCtx, streamIdx, ts, AVSEEK_FLAG_BACKWARD);
+            if (ret < 0) {
+                _seekTime = -1;
+            } else {
+                _seekTime = -1;
+                _aTime = 0;
+                _vTime = 0;
+                clearAudioPktList();
+                clearVideoPktList();
+            }
+        }
+
 
         if (_vPktList.size() >= VIDEO_MAX_PKT_SIZE || _aPktList.size() >= AUDIO_MAX_PKT_SIZE) {
-            SDL_Delay(10);
+//            SDL_Delay(10);
             continue;
         }
 
@@ -179,19 +215,26 @@ void VideoPlayer::readFile() {
                 av_packet_unref(&pkt);
             }
         } else if (ret == AVERROR_EOF) {
-            qDebug() << "end of file....";
-            break;
+//            qDebug() << "end of file....";
+//            break;
         } else {
             ERROR_BUFFER
             qDebug() << "av_read_frame error" << errbuf;
             continue;
         }
     }
+
+    _fmtCtxCanFree = true;
 }
 
 
 void VideoPlayer::free() {
+    while (_hasAudio && !_aCanFree);
+    while (_hasVideo && !_vCanFree);
+    while (!_fmtCtxCanFree);
     avformat_close_input(&_fmtCtx);
+    _fmtCtxCanFree = false;
+    _seekTime = -1;
 
     freeAudio();
     freeVideo();
@@ -199,7 +242,7 @@ void VideoPlayer::free() {
 
 
 void VideoPlayer::fatalError() {
-    setState(Stopped);
+    _state = Playing;
+    stop();
     emit playFailed(this);
-    free();
 }

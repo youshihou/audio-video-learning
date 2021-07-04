@@ -60,6 +60,7 @@ public:
         int width;
         int height;
         AVPixelFormat pixFmt;
+        int size;
     } VideoSwsSpec;
 
     void play();
@@ -70,7 +71,8 @@ public:
     State getState();
     void setFilename(QString &filename);
     int getDuration();
-    int getCurrent();
+    int getTime();
+    void setTime(int seekTime);
     void setVolumn(int volumn);
     int getVolumn();
     void setMute(bool mute);
@@ -105,8 +107,9 @@ private:
     AudioSwrSpec _aSwrOutSpec;
     int _aSwrOutIdx = 0;
     int _aSwrOutSize = 0;
-    double _aClock = 0;
-
+    double _aTime = 0;
+    bool _aCanFree = false;
+    bool _hasAudio = false;
 
 
     int initAudioInfo();
@@ -130,7 +133,9 @@ private:
     AVFrame *_vSwsInFrame = nullptr;
     AVFrame *_vSwsOutFrame = nullptr;
     VideoSwsSpec _vSwsOutSpec;
-    double _vClock = 0;
+    double _vTime = 0;
+    bool _vCanFree = false;
+    bool _hasVideo = false;
 
 
 
@@ -149,6 +154,9 @@ private:
     AVFormatContext *_fmtCtx = nullptr;
     int _volumn = Max;
     bool _mute = false;
+    bool _fmtCtxCanFree = false;
+    int _seekTime = -1;
+
 
     int initDecoder(AVStream **stream, AVCodecContext** decodeCtx, AVMediaType type);
     void setState(State state);

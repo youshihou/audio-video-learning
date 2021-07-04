@@ -16,4 +16,6 @@ void VideoSlider::mousePressEvent(QMouseEvent *ev) {
     setValue(value);
 
     QSlider::mousePressEvent(ev);
+
+    emit clicked(this);
 }

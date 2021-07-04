@@ -23,9 +23,11 @@ MainWindow::MainWindow(QWidget *parent)
     connect(_player, &VideoPlayer::frameDecoded, ui->videoWidget, &VideoWidget::onPlayerFrameDecoded);
     connect(_player, &VideoPlayer::stateChanged, ui->videoWidget, &VideoWidget::onPlayerStateChanged);
 
+    connect(ui->timeSlider, &VideoSlider::clicked, this, &MainWindow::onSliderClicked);
+
 
     ui->volumnSlider->setRange(VideoPlayer::Volumn::Min, VideoPlayer::Volumn::Max);
-    ui->volumnSlider->setValue(ui->volumnSlider->maximum());
+    ui->volumnSlider->setValue(ui->volumnSlider->maximum() >> 1);
 }
 
 MainWindow::~MainWindow()
@@ -41,13 +43,13 @@ void MainWindow::onPlayerPlayFailed(VideoPlayer *player) {
 
 void MainWindow::onPlayerInitFinished(VideoPlayer *player) {
     int microSeconds = player->getDuration();
-    ui->currentSlider->setRange(0, microSeconds);
+    ui->timeSlider->setRange(0, microSeconds);
 
     ui->durationLabel->setText(getTimeText(microSeconds));
 }
 
 void MainWindow::onPlayerTimeChanged(VideoPlayer( *player)) {
-    ui->currentSlider->setValue(player->getCurrent());
+    ui->timeSlider->setValue(player->getTime());
 }
 
 void MainWindow::onPlayerStateChanged(VideoPlayer *player) {
@@ -61,24 +63,29 @@ void MainWindow::onPlayerStateChanged(VideoPlayer *player) {
     if (state == VideoPlayer::Stopped) {
         ui->playButton->setEnabled(false);
         ui->stopButton->setEnabled(false);
-        ui->currentSlider->setEnabled(false);
+        ui->timeSlider->setEnabled(false);
         ui->volumnSlider->setEnabled(false);
         ui->muteButton->setEnabled(false);
 
         ui->durationLabel->setText(getTimeText(0));
-        ui->currentSlider->setValue(0);
+        ui->timeSlider->setValue(0);
 
         ui->playWidget->setCurrentWidget(ui->openfilePage);
     } else {
         ui->playButton->setEnabled(true);
         ui->stopButton->setEnabled(true);
-        ui->currentSlider->setEnabled(true);
+        ui->timeSlider->setEnabled(true);
         ui->volumnSlider->setEnabled(true);
         ui->muteButton->setEnabled(true);
 
         ui->playWidget->setCurrentWidget(ui->videoPage);
     }
 }
+
+void MainWindow::onSliderClicked(VideoSlider *slider) {
+    _player->setTime(slider->value());
+}
+
 
 void MainWindow::on_stopButton_clicked()
 {
@@ -109,9 +116,9 @@ void MainWindow::on_openfileButton_clicked()
     _player->play();
 }
 
-void MainWindow::on_currentSlider_valueChanged(int value)
+void MainWindow::on_timeSlider_valueChanged(int value)
 {
-    ui->currentLabel->setText(getTimeText(value));
+    ui->timeLabel->setText(getTimeText(value));
 }
 
 void MainWindow::on_volumnSlider_valueChanged(int value)

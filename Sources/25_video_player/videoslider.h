@@ -10,6 +10,8 @@ public:
     explicit VideoSlider(QWidget *parent = nullptr);
 
 signals:
+    void clicked(VideoSlider *slider);
+
 private:
     void mousePressEvent(QMouseEvent *ev) override;
 

@@ -15,10 +15,6 @@ int VideoPlayer::initVideoInfo() {
     ret = initSws();
     RET(initSws);
 
-    std::thread([this]() {
-        decodeVideo();
-    }).detach();
-
     return 0;
 }
 
@@ -28,6 +24,9 @@ int VideoPlayer::initSws() {
     _vSwsOutSpec.width = inWidth >> 4 << 4;
     _vSwsOutSpec.height = inHeight >> 4 << 4;
     _vSwsOutSpec.pixFmt = AV_PIX_FMT_RGB24;
+    _vSwsOutSpec.size = av_image_get_buffer_size(_vSwsOutSpec.pixFmt,
+                                                 _vSwsOutSpec.width,
+                                                 _vSwsOutSpec.height, 1);
 
     _vSwsCtx = sws_getContext(inWidth, inHeight, _vDecodeCtx->pix_fmt,
                               _vSwsOutSpec.width, _vSwsOutSpec.height, _vSwsOutSpec.pixFmt,
@@ -87,12 +86,16 @@ void VideoPlayer::freeVideo() {
     sws_freeContext(_vSwsCtx);
     _vSwsCtx = nullptr;
     _vStream = nullptr;
-    _vClock = 0;
+    _vTime = 0;
+    _vCanFree = false;
 }
 
 void VideoPlayer::decodeVideo() {
     while (true) {
-        if (_state == Stopped) { break; }
+        if (_state == Stopped) {
+            _vCanFree = true;
+            break;
+        }
 
         _vMutex.lock();
         if (_vPktList.empty()) {
@@ -107,7 +110,7 @@ void VideoPlayer::decodeVideo() {
         int ret = avcodec_send_packet(_vDecodeCtx, &pkt);
 
         if (pkt.dts != AV_NOPTS_VALUE) {
-            _vClock = av_q2d(_vStream->time_base) * pkt.dts;
+            _vTime = av_q2d(_vStream->time_base) * pkt.dts;
         }
 
         av_packet_unref(&pkt);
@@ -124,13 +127,16 @@ void VideoPlayer::decodeVideo() {
                       0, _vDecodeCtx->height,
                       _vSwsOutFrame->data, _vSwsOutFrame->linesize);
 
-            if (_aStream != nullptr) {
-                while (_vClock > _aClock && _state == Playing) {
-                    SDL_Delay(5);
+            if (_hasAudio) {
+                while (_vTime > _aTime && _state == Playing) {
+//                    SDL_Delay(5);
                 }
             } else {
 
             }
+
+            uint8_t *data = (uint8_t *)av_malloc(_vSwsOutSpec.size);
+            memcpy(data, _vSwsOutFrame->data[0], _vSwsOutSpec.size);
 
             emit frameDecoded(this, _vSwsOutFrame->data[0], _vSwsOutSpec);
         }

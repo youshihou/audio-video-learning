@@ -76,9 +76,6 @@ int VideoPlayer::initSDL() {
         return -1;
     }
 
-
-    SDL_PauseAudio(0);
-
     return 0;
 }
 
@@ -99,10 +96,11 @@ void VideoPlayer::clearAudioPktList() {
 }
 
 void VideoPlayer::freeAudio() {
-    _aClock = 0;
+    _aTime = 0;
     _aSwrOutIdx = 0;
     _aSwrOutSize = 0;
     _aStream = nullptr;
+    _aCanFree = false;
 
     clearAudioPktList();
     avcodec_free_context(&_aDecodeCtx);
@@ -126,7 +124,10 @@ void VideoPlayer::SDLAudioCallback(Uint8 *stream, int len) {
     SDL_memset(stream, 0, len);
 
     while (len > 0) {
-        if (_state == Stopped) { break; }
+        if (_state == Stopped) {
+            _aCanFree = true;
+            break;
+        }
 
         if (_aSwrOutIdx >=  _aSwrOutSize) {
             _aSwrOutSize = decodeAudio();
@@ -161,7 +162,7 @@ int VideoPlayer::decodeAudio() {
     _aMutex.unlock();
 
     if (pkt.pts != AV_NOPTS_VALUE) {
-        _aClock = av_q2d(_aStream->time_base) * pkt.pts;
+        _aTime = av_q2d(_aStream->time_base) * pkt.pts;
 
         emit timeChanged(this);
     }
