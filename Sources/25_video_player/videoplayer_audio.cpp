@@ -101,6 +101,7 @@ void VideoPlayer::freeAudio() {
     _aSwrOutSize = 0;
     _aStream = nullptr;
     _aCanFree = false;
+    _aSeekTime = -1;
 
     clearAudioPktList();
     avcodec_free_context(&_aDecodeCtx);
@@ -165,6 +166,15 @@ int VideoPlayer::decodeAudio() {
         _aTime = av_q2d(_aStream->time_base) * pkt.pts;
 
         emit timeChanged(this);
+    }
+
+    if (_aSeekTime >= 0) {
+        if (_aTime < _aSeekTime) {
+            av_packet_unref(&pkt);
+            return 0;
+        } else {
+            _aSeekTime = -1;
+        }
     }
 
     int ret = avcodec_send_packet(_aDecodeCtx, &pkt);

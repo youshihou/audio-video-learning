@@ -13,7 +13,7 @@ VideoWidget::~VideoWidget() {
 
 
 void VideoWidget::onPlayerFrameDecoded(VideoPlayer *player, uint8_t *data, VideoPlayer::VideoSwsSpec &spec) {
-    if (player->getState() != VideoPlayer::Stopped) { return; }
+    if (player->getState() == VideoPlayer::Stopped) { return; }
 
     freeImage();
 

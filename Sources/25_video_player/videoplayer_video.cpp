@@ -88,6 +88,7 @@ void VideoPlayer::freeVideo() {
     _vStream = nullptr;
     _vTime = 0;
     _vCanFree = false;
+    _vSeekTime = -1;
 }
 
 void VideoPlayer::decodeVideo() {
@@ -122,6 +123,14 @@ void VideoPlayer::decodeVideo() {
                 break;
             } else BREAK(avcodec_receive_frame);
 
+            if (_vSeekTime >= 0) {
+                if (_vTime < _vSeekTime) {
+                    continue;
+                } else {
+                    _vSeekTime = -1;
+                }
+            }
+
             sws_scale(_vSwsCtx,
                       _vSwsInFrame->data, _vSwsInFrame->linesize,
                       0, _vDecodeCtx->height,
@@ -138,7 +147,7 @@ void VideoPlayer::decodeVideo() {
             uint8_t *data = (uint8_t *)av_malloc(_vSwsOutSpec.size);
             memcpy(data, _vSwsOutFrame->data[0], _vSwsOutSpec.size);
 
-            emit frameDecoded(this, _vSwsOutFrame->data[0], _vSwsOutSpec);
+            emit frameDecoded(this, data, _vSwsOutSpec);
         }
     }
 }

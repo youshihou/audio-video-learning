@@ -21,6 +21,8 @@ VideoPlayer::VideoPlayer(QObject *parent) : QObject(parent) {
 }
 
 VideoPlayer::~VideoPlayer() {
+    disconnect();
+
     stop();
     SDL_Quit();
 }
@@ -159,8 +161,8 @@ void VideoPlayer::readFile() {
     av_dump_format(_fmtCtx, 0, _filename, 0);
     fflush(stderr);
 
-    _hasAudio = initAudioInfo() < 0;
-    _hasVideo = initVideoInfo() < 0;
+    _hasAudio = initAudioInfo() >= 0;
+    _hasVideo = initVideoInfo() >= 0;
     if (!_hasAudio && !_hasVideo) {
         fatalError();
         return;
@@ -191,6 +193,8 @@ void VideoPlayer::readFile() {
             if (ret < 0) {
                 _seekTime = -1;
             } else {
+                _vSeekTime = _seekTime;
+                _aSeekTime = _seekTime;
                 _seekTime = -1;
                 _aTime = 0;
                 _vTime = 0;
@@ -200,7 +204,9 @@ void VideoPlayer::readFile() {
         }
 
 
-        if (_vPktList.size() >= VIDEO_MAX_PKT_SIZE || _aPktList.size() >= AUDIO_MAX_PKT_SIZE) {
+        int vSize = _vPktList.size();
+        int aSize = _aPktList.size();
+        if (vSize >= VIDEO_MAX_PKT_SIZE || aSize >= AUDIO_MAX_PKT_SIZE) {
 //            SDL_Delay(10);
             continue;
         }
@@ -217,6 +223,11 @@ void VideoPlayer::readFile() {
         } else if (ret == AVERROR_EOF) {
 //            qDebug() << "end of file....";
 //            break;
+
+            if (vSize == 0 && aSize == 0) {
+                _fmtCtxCanFree = true;
+                break;
+            }
         } else {
             ERROR_BUFFER
             qDebug() << "av_read_frame error" << errbuf;
@@ -224,7 +235,11 @@ void VideoPlayer::readFile() {
         }
     }
 
-    _fmtCtxCanFree = true;
+    if (_fmtCtxCanFree) {
+        stop();
+    } else {
+        _fmtCtxCanFree = true;
+    }
 }
 
 

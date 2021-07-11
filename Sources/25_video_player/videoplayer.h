@@ -110,6 +110,7 @@ private:
     double _aTime = 0;
     bool _aCanFree = false;
     bool _hasAudio = false;
+    int _aSeekTime = -1;
 
 
     int initAudioInfo();
@@ -136,6 +137,7 @@ private:
     double _vTime = 0;
     bool _vCanFree = false;
     bool _hasVideo = false;
+    int _vSeekTime = -1;
 
 
 
