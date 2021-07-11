@@ -93,6 +93,10 @@ void VideoPlayer::freeVideo() {
 
 void VideoPlayer::decodeVideo() {
     while (true) {
+        if (_state == Paused && _vSeekTime == -1) {
+            continue;
+        }
+
         if (_state == Stopped) {
             _vCanFree = true;
             break;

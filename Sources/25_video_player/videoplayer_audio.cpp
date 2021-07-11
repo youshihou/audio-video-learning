@@ -125,6 +125,10 @@ void VideoPlayer::SDLAudioCallback(Uint8 *stream, int len) {
     SDL_memset(stream, 0, len);
 
     while (len > 0) {
+        if (_state == Paused) {
+            break;
+        }
+
         if (_state == Stopped) {
             _aCanFree = true;
             break;
